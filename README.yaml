@@ -1,70 +1,515 @@
-name: "template"
-
+name: "aws-eks-cluster"
 # Canonical GitHub repo
-github_repo: "cloudposse-terraform-components/template"
-
+github_repo: "cloudposse-terraform-components/aws-eks-cluster"
 # Short description of this project
 description: |-
-  Description of this component
+  This component is responsible for provisioning an end-to-end EKS Cluster, including managed node groups and Fargate
+  profiles.
 
-usage: |-
-  **Stack Level**: Regional or Test47
+  > [!NOTE]
+  >
+  > #### Windows not supported
+  >
+  > This component has not been tested with Windows worker nodes of any launch type. Although upstream modules support
+  > Windows nodes, there are likely issues around incorrect or insufficient IAM permissions or other configuration that
+  > would need to be resolved for this component to properly configure the upstream modules for Windows nodes. If you need
+  > Windows nodes, please experiment and be on the lookout for issues, and then report any issues to Cloud Posse.
+
+  ## Usage
+
+  **Stack Level**: Regional
 
   Here's an example snippet for how to use this component.
-  
+
+  This example expects the [Cloud Posse Reference Architecture](https://docs.cloudposse.com/) Identity and Network designs
+  deployed for mapping users to EKS service roles and granting access in a private network. In addition, this example has
+  the GitHub OIDC integration added and makes use of Karpenter to dynamically scale cluster nodes.
+
+  For more on these requirements, see [Identity Reference Architecture](https://docs.cloudposse.com/layers/identity/),
+  [Network Reference Architecture](https://docs.cloudposse.com/layers/network/), the
+  [GitHub OIDC component](https://docs.cloudposse.com/components/library/aws/github-oidc-provider/), and the
+  [Karpenter component](https://docs.cloudposse.com/components/library/aws/eks/karpenter/).
+
+  ### Mixin pattern for Kubernetes version
+
+  We recommend separating out the Kubernetes and related addons versions into a separate mixin (one per Kubernetes minor
+  version), to make it easier to run different versions in different environments, for example while testing a new
+  version.
+
+  We also recommend leaving "resolve conflicts" settings unset and therefore using the default "OVERWRITE" setting because
+  any custom configuration that you would want to preserve should be managed by Terraform configuring the add-ons
+  directly.
+
+  For example, create `catalog/eks/cluster/mixins/k8s-1-29.yaml` with the following content:
+
   ```yaml
   components:
     terraform:
-      foo:
+      eks/cluster:
         vars:
-          enabled: true
+          cluster_kubernetes_version: "1.29"
+
+          # You can set all the add-on versions to `null` to use the latest version,
+          # but that introduces drift as new versions are released. As usual, we recommend
+          # pinning the versions to a specific version and upgrading when convenient.
+
+          # Determine the latest version of the EKS add-ons for the specified Kubernetes version
+          #  EKS_K8S_VERSION=1.29 # replace with your cluster version
+          #  ADD_ON=vpc-cni # replace with the add-on name
+          #  echo "${ADD_ON}:" && aws eks describe-addon-versions --kubernetes-version $EKS_K8S_VERSION --addon-name $ADD_ON \
+          #  --query 'addons[].addonVersions[].{Version: addonVersion, Defaultversion: compatibilities[0].defaultVersion}' --output table
+
+          # To see versions for all the add-ons, wrap the above command in a for loop:
+          #   for ADD_ON in vpc-cni kube-proxy coredns aws-ebs-csi-driver aws-efs-csi-driver; do
+          #     echo "${ADD_ON}:" && aws eks describe-addon-versions --kubernetes-version $EKS_K8S_VERSION --addon-name $ADD_ON \
+          #     --query 'addons[].addonVersions[].{Version: addonVersion, Defaultversion: compatibilities[0].defaultVersion}' --output table
+          #   done
+
+          # To see the custom configuration schema for an add-on, run the following command:
+          #   aws eks describe-addon-configuration --addon-name aws-ebs-csi-driver \
+          #   --addon-version v1.20.0-eksbuild.1 | jq '.configurationSchema | fromjson'
+          # See the `coredns` configuration below for an example of how to set a custom configuration.
+
+          # https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html
+          # https://docs.aws.amazon.com/eks/latest/userguide/managing-add-ons.html#creating-an-add-on
+          addons:
+            # https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html
+            # https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
+            # https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html#cni-iam-role-create-role
+            # https://aws.github.io/aws-eks-best-practices/networking/vpc-cni/#deploy-vpc-cni-managed-add-on
+            vpc-cni:
+              addon_version: "v1.16.0-eksbuild.1" # set `addon_version` to `null` to use the latest version
+            # https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
+            kube-proxy:
+              addon_version: "v1.29.0-eksbuild.1" # set `addon_version` to `null` to use the latest version
+            # https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
+            coredns:
+              addon_version: "v1.11.1-eksbuild.4" # set `addon_version` to `null` to use the latest version
+              ## override default replica count of 2. In very large clusters, you may want to increase this.
+              configuration_values: '{"replicaCount": 3}'
+
+            # https://docs.aws.amazon.com/eks/latest/userguide/csi-iam-role.html
+            # https://aws.amazon.com/blogs/containers/amazon-ebs-csi-driver-is-now-generally-available-in-amazon-eks-add-ons
+            # https://docs.aws.amazon.com/eks/latest/userguide/managing-ebs-csi.html#csi-iam-role
+            # https://github.com/kubernetes-sigs/aws-ebs-csi-driver
+            aws-ebs-csi-driver:
+              addon_version: "v1.27.0-eksbuild.1" # set `addon_version` to `null` to use the latest version
+              # If you are not using [volume snapshots](https://kubernetes.io/blog/2020/12/10/kubernetes-1.20-volume-snapshot-moves-to-ga/#how-to-use-volume-snapshots)
+              # (and you probably are not), disable the EBS Snapshotter
+              # See https://github.com/aws/containers-roadmap/issues/1919
+              configuration_values: '{"sidecars":{"snapshotter":{"forceEnable":false}}}'
+
+            aws-efs-csi-driver:
+              addon_version: "v1.7.7-eksbuild.1" # set `addon_version` to `null` to use the latest version
+              # Set a short timeout in case of conflict with an existing efs-controller deployment
+              create_timeout: "7m"
   ```
 
+  ### Common settings for all Kubernetes versions
+
+  In your main stack configuration, you can then set the Kubernetes version by importing the appropriate mixin:
+
+  ```yaml
+  #
+  import:
+    - catalog/eks/cluster/mixins/k8s-1-29
+
+  components:
+    terraform:
+      eks/cluster:
+        vars:
+          enabled: true
+          name: eks
+          vpc_component_name: "vpc"
+          eks_component_name: "eks/cluster"
+
+          # Your choice of availability zones or availability zone ids
+          # availability_zones: ["us-east-1a", "us-east-1b", "us-east-1c"]
+          aws_ssm_agent_enabled: true
+          allow_ingress_from_vpc_accounts:
+            - tenant: core
+              stage: auto
+            - tenant: core
+              stage: corp
+            - tenant: core
+              stage: network
+
+          public_access_cidrs: []
+          allowed_cidr_blocks: []
+          allowed_security_groups: []
+
+          enabled_cluster_log_types:
+            # Caution: enabling `api` log events may lead to a substantial increase in Cloudwatch Logs expenses.
+            - api
+            - audit
+            - authenticator
+            - controllerManager
+            - scheduler
+
+          oidc_provider_enabled: true
+
+          # Allows GitHub OIDC role
+          github_actions_iam_role_enabled: true
+          github_actions_iam_role_attributes: ["eks"]
+          github_actions_allowed_repos:
+            - acme/infra
+
+          # We recommend, at a minimum, deploying 1 managed node group,
+          # with the same number of instances as availability zones (typically 3).
+          managed_node_groups_enabled: true
+          node_groups: # for most attributes, setting null here means use setting from node_group_defaults
+            main:
+              # availability_zones = null will create one autoscaling group
+              # in every private subnet in the VPC
+              availability_zones: null
+
+              # Tune the desired and minimum group size according to your baseload requirements.
+              # We recommend no autoscaling for the main node group, so it will
+              # stay at the specified desired group size, with additional
+              # capacity provided by Karpenter. Nevertheless, we recommend
+              # deploying enough capacity in the node group to handle your
+              # baseload requirements, and in production, we recommend you
+              # have a large enough node group to handle 3/2 (1.5) times your
+              # baseload requirements, to handle the loss of a single AZ.
+              desired_group_size: 3 # number of instances to start with, should be >= number of AZs
+              min_group_size: 3 # must be  >= number of AZs
+              max_group_size: 3
+
+              # Can only set one of ami_release_version or kubernetes_version
+              # Leave both null to use latest AMI for Cluster Kubernetes version
+              kubernetes_version: null # use cluster Kubernetes version
+              ami_release_version: null # use latest AMI for Kubernetes version
+
+              attributes: []
+              create_before_destroy: true
+              cluster_autoscaler_enabled: true
+              instance_types:
+                # Tune the instance type according to your baseload requirements.
+                - c7a.medium
+              ami_type: AL2_x86_64 # use "AL2_x86_64" for standard instances, "AL2_x86_64_GPU" for GPU instances
+              node_userdata:
+                # WARNING: node_userdata is alpha status and will likely change in the future.
+                #          Also, it is only supported for AL2 and some Windows AMIs, not BottleRocket or AL2023.
+                # Kubernetes docs: https://kubernetes.io/docs/tasks/administer-cluster/reserve-compute-resources/
+                kubelet_extra_args: >-
+                  --kube-reserved cpu=100m,memory=0.6Gi,ephemeral-storage=1Gi --system-reserved
+                  cpu=100m,memory=0.2Gi,ephemeral-storage=1Gi --eviction-hard
+                  memory.available<200Mi,nodefs.available<10%,imagefs.available<15%
+              block_device_map:
+                # EBS volume for local ephemeral storage
+                # IGNORED if legacy `disk_encryption_enabled` or `disk_size` are set!
+                # Use "/dev/xvda" for most of the instances (without local NVMe)
+                # using most of the Linuxes, "/dev/xvdb" for BottleRocket
+                "/dev/xvda":
+                  ebs:
+                    volume_size: 100 # number of GB
+                    volume_type: gp3
+
+              kubernetes_labels: {}
+              kubernetes_taints: {}
+              resources_to_tag:
+                - instance
+                - volume
+              tags: null
+
+          # The abbreviation method used for Availability Zones in your project.
+          # Used for naming resources in managed node groups.
+          # Either "short" or "fixed".
+          availability_zone_abbreviation_type: fixed
+
+          cluster_private_subnets_only: true
+          cluster_encryption_config_enabled: true
+          cluster_endpoint_private_access: true
+          cluster_endpoint_public_access: false
+          cluster_log_retention_period: 90
+
+          # List of `aws-team-roles` (in the account where the EKS cluster is deployed) to map to Kubernetes RBAC groups
+          # You cannot set `system:*` groups here, except for `system:masters`.
+          # The `idp:*` roles referenced here are created by the `eks/idp-roles` component.
+          # While set here, the `idp:*` roles will have no effect until after
+          # the `eks/idp-roles` component is applied, which must be after the
+          # `eks/cluster` component is deployed.
+          aws_team_roles_rbac:
+            - aws_team_role: admin
+              groups:
+                - system:masters
+            - aws_team_role: poweruser
+              groups:
+                - idp:poweruser
+            - aws_team_role: observer
+              groups:
+                - idp:observer
+            - aws_team_role: planner
+              groups:
+                - idp:observer
+            - aws_team: terraform
+              groups:
+                - system:masters
+
+          # Permission sets from AWS SSO allowing cluster access
+          # See `aws-sso` component.
+          aws_sso_permission_sets_rbac:
+            - aws_sso_permission_set: PowerUserAccess
+              groups:
+                - idp:poweruser
+
+          # Set to false if you are not using Karpenter
+          karpenter_iam_role_enabled: true
+
+          # All Fargate Profiles will use the same IAM Role when `legacy_fargate_1_role_per_profile_enabled` is set to false.
+          # Recommended for all new clusters, but will damage existing clusters provisioned with the legacy component.
+          legacy_fargate_1_role_per_profile_enabled: false
+          # While it is possible to deploy add-ons to Fargate Profiles, it is not recommended. Use a managed node group instead.
+          deploy_addons_to_fargate: false
+  ```
+
+  ### Amazon EKS End-of-Life Dates
+
+  When picking a Kubernetes version, be sure to review the
+  [end-of-life dates for Amazon EKS](https://endoflife.date/amazon-eks). Refer to the chart below:
+
+  | cycle |  release   | latest      | latest release |    eol     | extended support |
+  | :---- | :--------: | :---------- | :------------: | :--------: | :--------------: |
+  | 1.29  | 2024-01-23 | 1.29-eks-6  |   2024-04-18   | 2025-03-23 |    2026-03-23    |
+  | 1.28  | 2023-09-26 | 1.28-eks-12 |   2024-04-18   | 2024-11-26 |    2025-11-26    |
+  | 1.27  | 2023-05-24 | 1.27-eks-16 |   2024-04-18   | 2024-07-24 |    2025-07-24    |
+  | 1.26  | 2023-04-11 | 1.26-eks-17 |   2024-04-18   | 2024-06-11 |    2025-06-11    |
+  | 1.25  | 2023-02-21 | 1.25-eks-18 |   2024-04-18   | 2024-05-01 |    2025-05-01    |
+  | 1.24  | 2022-11-15 | 1.24-eks-21 |   2024-04-18   | 2024-01-31 |    2025-01-31    |
+  | 1.23  | 2022-08-11 | 1.23-eks-23 |   2024-04-18   | 2023-10-11 |    2024-10-11    |
+  | 1.22  | 2022-04-04 | 1.22-eks-14 |   2023-06-30   | 2023-06-04 |    2024-09-01    |
+  | 1.21  | 2021-07-19 | 1.21-eks-18 |   2023-06-09   | 2023-02-16 |    2024-07-15    |
+  | 1.20  | 2021-05-18 | 1.20-eks-14 |   2023-05-05   | 2022-11-01 |      False       |
+  | 1.19  | 2021-02-16 | 1.19-eks-11 |   2022-08-15   | 2022-08-01 |      False       |
+  | 1.18  | 2020-10-13 | 1.18-eks-13 |   2022-08-15   | 2022-08-15 |      False       |
+
+  \* This Chart was generated 2024-05-12 with [the `eol` tool](https://github.com/hugovk/norwegianblue). Install it with
+  `python3 -m pip install --upgrade norwegianblue` and create a new table by running `eol --md amazon-eks` locally, or
+  view the information by visiting [the endoflife website](https://endoflife.date/amazon-eks).
+
+  You can also view the release and support timeline for
+  [the Kubernetes project itself](https://endoflife.date/kubernetes).
+
+  ### Using Addons
+
+  EKS clusters support “Addons” that can be automatically installed on a cluster. Install these addons with the
+  [`var.addons` input](https://docs.cloudposse.com/components/library/aws/eks/cluster/#input_addons).
+
+  > [!TIP]
+  >
+  > Run the following command to see all available addons, their type, and their publisher. You can also see the URL for
+  > addons that are available through the AWS Marketplace. Replace 1.27 with the version of your cluster. See
+  > [Creating an addon](https://docs.aws.amazon.com/eks/latest/userguide/managing-add-ons.html#creating-an-add-on) for
+  > more details.
+
+  ```shell
+  EKS_K8S_VERSION=1.29 # replace with your cluster version
+  aws eks describe-addon-versions --kubernetes-version $EKS_K8S_VERSION \
+    --query 'addons[].{MarketplaceProductUrl: marketplaceInformation.productUrl, Name: addonName, Owner: owner Publisher: publisher, Type: type}' --output table
+  ```
+
+  > [!TIP]
+  >
+  > You can see which versions are available for each addon by executing the following commands. Replace 1.29 with the
+  > version of your cluster.
+
+  ```shell
+  EKS_K8S_VERSION=1.29 # replace with your cluster version
+  echo "vpc-cni:" && aws eks describe-addon-versions --kubernetes-version $EKS_K8S_VERSION --addon-name vpc-cni \
+    --query 'addons[].addonVersions[].{Version: addonVersion, Defaultversion: compatibilities[0].defaultVersion}' --output table
+
+  echo "kube-proxy:" && aws eks describe-addon-versions --kubernetes-version $EKS_K8S_VERSION --addon-name kube-proxy \
+    --query 'addons[].addonVersions[].{Version: addonVersion, Defaultversion: compatibilities[0].defaultVersion}' --output table
+
+  echo "coredns:" && aws eks describe-addon-versions --kubernetes-version $EKS_K8S_VERSION --addon-name coredns \
+    --query 'addons[].addonVersions[].{Version: addonVersion, Defaultversion: compatibilities[0].defaultVersion}' --output table
+
+  echo "aws-ebs-csi-driver:" && aws eks describe-addon-versions --kubernetes-version $EKS_K8S_VERSION --addon-name aws-ebs-csi-driver \
+    --query 'addons[].addonVersions[].{Version: addonVersion, Defaultversion: compatibilities[0].defaultVersion}' --output table
+
+  echo "aws-efs-csi-driver:" && aws eks describe-addon-versions --kubernetes-version $EKS_K8S_VERSION --addon-name aws-efs-csi-driver \
+    --query 'addons[].addonVersions[].{Version: addonVersion, Defaultversion: compatibilities[0].defaultVersion}' --output table
+  ```
+
+  Some add-ons accept additional configuration. For example, the `vpc-cni` addon accepts a `disableNetworking` parameter.
+  View the available configuration options (as JSON Schema) via the `aws eks describe-addon-configuration` command. For
+  example:
+
+  ```shell
+  aws eks describe-addon-configuration \
+    --addon-name aws-ebs-csi-driver \
+    --addon-version v1.20.0-eksbuild.1 | jq '.configurationSchema | fromjson'
+  ```
+
+  You can then configure the add-on via the `configuration_values` input. For example:
+
+  ```yaml
+  aws-ebs-csi-driver:
+    configuration_values: '{"node": {"loggingFormat": "json"}}'
+  ```
+
+  Configure the addons like the following example:
+
+  ```yaml
+  # https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html
+  # https://docs.aws.amazon.com/eks/latest/userguide/managing-add-ons.html#creating-an-add-on
+  # https://aws.amazon.com/blogs/containers/amazon-eks-add-ons-advanced-configuration/
+  addons:
+    # https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html
+    # https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html
+    # https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html#cni-iam-role-create-role
+    # https://aws.github.io/aws-eks-best-practices/networking/vpc-cni/#deploy-vpc-cni-managed-add-on
+    vpc-cni:
+      addon_version: "v1.12.2-eksbuild.1" # set `addon_version` to `null` to use the latest version
+    # https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
+    kube-proxy:
+      addon_version: "v1.25.6-eksbuild.1" # set `addon_version` to `null` to use the latest version
+    # https://docs.aws.amazon.com/eks/latest/userguide/managing-coredns.html
+    coredns:
+      addon_version: "v1.9.3-eksbuild.2" # set `addon_version` to `null` to use the latest version
+      # Override default replica count of 2, to have one in each AZ
+      configuration_values: '{"replicaCount": 3}'
+    # https://docs.aws.amazon.com/eks/latest/userguide/csi-iam-role.html
+    # https://aws.amazon.com/blogs/containers/amazon-ebs-csi-driver-is-now-generally-available-in-amazon-eks-add-ons
+    # https://docs.aws.amazon.com/eks/latest/userguide/managing-ebs-csi.html#csi-iam-role
+    # https://github.com/kubernetes-sigs/aws-ebs-csi-driver
+    aws-ebs-csi-driver:
+      addon_version: "v1.19.0-eksbuild.2" # set `addon_version` to `null` to use the latest version
+      # If you are not using [volume snapshots](https://kubernetes.io/blog/2020/12/10/kubernetes-1.20-volume-snapshot-moves-to-ga/#how-to-use-volume-snapshots)
+      # (and you probably are not), disable the EBS Snapshotter with:
+      configuration_values: '{"sidecars":{"snapshotter":{"forceEnable":false}}}'
+  ```
+
+  Some addons, such as CoreDNS, require at least one node to be fully provisioned first. See
+  [issue #170](https://github.com/cloudposse/terraform-aws-eks-cluster/issues/170) for more details. Set
+  `var.addons_depends_on` to `true` to require the Node Groups to be provisioned before addons.
+
+  ```yaml
+  addons_depends_on: true
+  addons:
+    coredns:
+      addon_version: "v1.8.7-eksbuild.1"
+  ```
+
+  > [!WARNING]
+  >
+  > Addons may not be suitable for all use-cases! For example, if you are deploying Karpenter to Fargate and using
+  > Karpenter to provision all nodes, these nodes will never be available before the cluster component is deployed if you
+  > are using the CoreDNS addon (for example).
+  >
+  > This is one of the reasons we recommend deploying a managed node group: to ensure that the addons will become fully
+  > functional during deployment of the cluster.
+
+  For more information on upgrading EKS Addons, see
+  ["How to Upgrade EKS Cluster Addons"](https://docs.cloudposse.com/learn/maintenance/upgrades/how-to-upgrade-eks-cluster-addons/)
+
+  ### Adding and Configuring a new EKS Addon
+
+  The component already supports all the EKS addons shown in the configurations above. To add a new EKS addon, not
+  supported by the cluster, add it to the `addons` map (`addons` variable):
+
+  ```yaml
+  addons:
+    my-addon:
+      addon_version: "..."
+  ```
+
+  If the new addon requires an EKS IAM Role for Kubernetes Service Account, perform the following steps:
+
+  - Add a file `addons-custom.tf` to the `eks/cluster` folder if not already present
+
+  - In the file, add an IAM policy document with the permissions required for the addon, and use the `eks-iam-role` module
+    to provision an IAM Role for Kubernetes Service Account for the addon:
+
+    ```hcl
+      data "aws_iam_policy_document" "my_addon" {
+        statement {
+          sid       = "..."
+          effect    = "Allow"
+          resources = ["..."]
+
+          actions = [
+            "...",
+            "..."
+          ]
+        }
+      }
+
+      module "my_addon_eks_iam_role" {
+        source  = "cloudposse/eks-iam-role/aws"
+        version = "2.1.0"
+
+        eks_cluster_oidc_issuer_url = local.eks_cluster_oidc_issuer_url
+
+        service_account_name      = "..."
+        service_account_namespace = "..."
+
+        aws_iam_policy_document = [one(data.aws_iam_policy_document.my_addon[*].json)]
+
+        context = module.this.context
+      }
+    ```
+
+    For examples of how to configure the IAM role and IAM permissions for EKS addons, see [addons.tf](addons.tf).
+
+  - Add a file `additional-addon-support_override.tf` to the `eks/cluster` folder if not already present
+
+  - In the file, add the IAM Role for Kubernetes Service Account for the addon to the
+    `overridable_additional_addon_service_account_role_arn_map` map:
+
+    ```hcl
+      locals {
+        overridable_additional_addon_service_account_role_arn_map = {
+          my-addon = module.my_addon_eks_iam_role.service_account_role_arn
+        }
+      }
+    ```
+
+  - This map will override the default map in the [additional-addon-support.tf](additional-addon-support.tf) file, and
+    will be merged into the final map together with the default EKS addons `vpc-cni` and `aws-ebs-csi-driver` (which this
+    component configures and creates IAM Roles for Kubernetes Service Accounts)
+
+  - Follow the instructions in the [additional-addon-support.tf](additional-addon-support.tf) file if the addon may need
+    to be deployed to Fargate, or has dependencies that Terraform cannot detect automatically.
+
+  <!-- prettier-ignore-start -->
+
+  <!-- prettier-ignore-end -->
+
+  ## Related How-to Guides
+
+  - [EKS Foundational Platform](https://docs.cloudposse.com/layers/eks/)
+
+  ## References
+
+  - [cloudposse/terraform-aws-components](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/cluster) -
+    Cloud Posse's upstream component
 include:
   - "docs/terraform.md"
-
 tags:
-  - terraform
-  - terraform-modules
-  - aws
-  - components
-  - terraform-components
-  - root
-  - geodesic
-  - reference-implementation
-  - reference-architecture
-
+  - component/eks/cluster
+  - layer/eks
+  - provider/aws
 # Categories of this project
 categories:
-  - terraform-modules/root
-  - terraform-components
-
+  - component/eks/cluster
+  - layer/eks
+  - provider/aws
 # License of this project
 license: "APACHE2"
-
 # Badges to display
 badges:
-  - name: "Latest Release"
-    image: "https://img.shields.io/github/release/cloudposse-terraform-components/template.svg?style=for-the-badge"
-    url: "https://github.com/cloudposse-terraform-components/template/releases/latest"
-  - name: "Slack Community"
-    image: "https://slack.cloudposse.com/for-the-badge.svg"
-    url: "https://slack.cloudposse.com"
-
-references:
-  - name: "Cloud Posse Documentation"
-    description: "Complete documentation for the Cloud Posse solution"
-    url: "https://docs.cloudposse.com"
-  - name: "Reference Architectures"
-    description: "Launch effortlessly with our turnkey reference architectures, built either by your team or ours."
-    url: "https://cloudposse.com/"
-
+  - name: Latest Release
+    image: https://img.shields.io/github/release/cloudposse-terraform-components/aws-eks-cluster.svg?style=for-the-badge
+    url: https://github.com/cloudposse-terraform-components/aws-eks-cluster/releases/latest
+  - name: Slack Community
+    image: https://slack.cloudposse.com/for-the-badge.svg
+    url: https://slack.cloudposse.com
 related:
-- name: "Cloud Posse Terraform Modules"
-  description: Our collection of reusable Terraform modules used by our reference architectures.
-  url: "https://docs.cloudposse.com/modules/"
-- name: "Atmos"
-  description: "Atmos is like docker-compose but for your infrastructure"
-  url: "https://atmos.tools"
-
+  - name: "Cloud Posse Terraform Modules"
+    description: Our collection of reusable Terraform modules used by our reference architectures.
+    url: "https://docs.cloudposse.com/modules/"
+  - name: "Atmos"
+    description: "Atmos is like docker-compose but for your infrastructure"
+    url: "https://atmos.tools"
 contributors: [] # If included generates contribs
