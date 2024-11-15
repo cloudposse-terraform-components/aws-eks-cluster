@@ -5,3 +5,4 @@ repository:
   description: This component is responsible for provisioning an end-to-end EKS Cluster, including managed node groups and Fargate profiles
   homepage: https://cloudposse.com/accelerate
   topics: terraform, terraform-component
+
