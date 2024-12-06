@@ -14,7 +14,7 @@ module "iam_arns" {
 
 module "vpc" {
   source  = "cloudposse/stack-config/yaml//modules/remote-state"
-  version = "1.5.0"
+  version = "1.8.0"
 
   bypass    = !local.enabled
   component = var.vpc_component_name
@@ -34,7 +34,7 @@ module "vpc" {
 
 module "vpc_ingress" {
   source  = "cloudposse/stack-config/yaml//modules/remote-state"
-  version = "1.5.0"
+  version = "1.8.0"
 
   for_each = local.accounts_with_vpc
 
