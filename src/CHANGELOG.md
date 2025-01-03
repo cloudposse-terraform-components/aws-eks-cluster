@@ -461,11 +461,11 @@ these steps:
 
 1. Remove or scale to zero Pods any Deployments using the EFS file system.
 2. Remove (`terraform destroy`) the `eks/efs-controller` module from your cluster. This will also remove the `efs-sc`
-   StorageClass.
+  StorageClass.
 3. Use the
-   [eks/storage-class](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/storage-class)
-   module to create a replacement EFS StorageClass `efs-sc`. This component is new and you may need to add it to your
-   cluster.
+  [eks/storage-class](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/storage-class)
+  module to create a replacement EFS StorageClass `efs-sc`. This component is new and you may need to add it to your
+  cluster.
 4. Deploy the EFS CSI Driver Add-On by adding `aws-efs-csi-driver` to the `addons` map (see `README`).
 5. Restore the Deployments you modified in step 1.
 
