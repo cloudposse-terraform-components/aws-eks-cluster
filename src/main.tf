@@ -45,8 +45,8 @@ locals {
   }
 
   iam_users_access_entry_map = {
-    for role in var.map_additional_iam_users : role.rolearn => {
-      kubernetes_groups = role.groups
+    for user in var.map_additional_iam_users : user.userarn => {
+      kubernetes_groups = user.groups
     }
   }
 
