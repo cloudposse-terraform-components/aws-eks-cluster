@@ -1,7 +1,7 @@
 provider "aws" {
   region = var.region
 
-  assume_role {
+  dynamic "assume_role" {
     # WARNING:
     #   The EKS cluster is owned by the role that created it, and that
     #   role is the only role that can access the cluster without an
@@ -10,7 +10,10 @@ provider "aws" {
     #   be removed without notice.
     #
     # This should only be run using the target account's Terraform role.
-    role_arn = module.iam_roles.terraform_role_arn
+    for_each = compact([module.iam_roles.terraform_role_arn])
+    content {
+      role_arn = assume_role.value
+    }
   }
 }
 
