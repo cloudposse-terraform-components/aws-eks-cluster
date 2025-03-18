@@ -44,6 +44,10 @@ components:
               - volume
             tags: null
 
+        access_config:
+          authentication_mode: "API"
+          bootstrap_cluster_creator_admin_permissions: true
+
         # Fargate profiles, required for Karpenter
         fargate_profiles:
           karpenter:
