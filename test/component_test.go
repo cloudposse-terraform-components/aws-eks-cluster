@@ -137,7 +137,7 @@ func (s *ComponentSuite) TestBasic() {
 }
 
 func (s *ComponentSuite) TestEnabledFlag() {
-	const component = "example/disabled"
+	const component = "eks/cluster/disabled"
 	const stack = "default-test"
 	s.VerifyEnabledFlag(component, stack, nil)
 }

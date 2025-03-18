@@ -1,6 +1,6 @@
 components:
   terraform:
-    example/disabled:
+    eks/cluster/disabled:
       metadata:
         component: eks/cluster
       vars:
