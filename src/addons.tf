@@ -111,7 +111,7 @@ resource "aws_iam_role_policy_attachment" "vpc_cni" {
 
 module "vpc_cni_eks_iam_role" {
   source  = "cloudposse/eks-iam-role/aws"
-  version = "2.1.1"
+  version = "2.2.1"
 
   enabled = local.vpc_cni_sa_needed
 
@@ -160,7 +160,7 @@ resource "aws_iam_role_policy_attachment" "aws_ebs_csi_driver" {
 
 module "aws_ebs_csi_driver_eks_iam_role" {
   source  = "cloudposse/eks-iam-role/aws"
-  version = "2.1.1"
+  version = "2.2.1"
 
   enabled = local.ebs_csi_sa_needed
 
@@ -206,7 +206,7 @@ resource "aws_iam_role_policy_attachment" "aws_efs_csi_driver" {
 
 module "aws_efs_csi_driver_eks_iam_role" {
   source  = "cloudposse/eks-iam-role/aws"
-  version = "2.1.1"
+  version = "2.2.1"
 
   enabled = local.efs_csi_sa_needed
 
