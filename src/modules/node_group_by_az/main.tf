@@ -62,6 +62,7 @@ module "eks_node_group" {
   kubernetes_version         = local.enabled && length(compact([var.cluster_context.kubernetes_version])) != 0 ? [var.cluster_context.kubernetes_version] : []
   resources_to_tag           = local.enabled ? var.cluster_context.resources_to_tag : null
   subnet_ids                 = local.enabled ? local.subnet_ids : null
+  node_repair_enabled        = var.node_repair_enabled
 
   # node_userdata
   before_cluster_joining_userdata = local.enabled ? local.before_cluster_joining_userdata : []
