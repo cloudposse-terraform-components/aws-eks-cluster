@@ -12,6 +12,12 @@ variable "node_group_size" {
   description = "The desired, minimum and maximum size of the node group in this availability zone"
 }
 
+variable "node_repair_enabled" {
+  type        = bool
+  description = "The node auto-repair configuration for the node group will be enabled. Defaults to false"
+  default     = false
+}
+
 variable "cluster_context" {
   type = object({
     ami_release_version        = string
