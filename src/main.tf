@@ -164,9 +164,11 @@ module "eks_cluster" {
   region     = var.region
   attributes = local.attributes
 
-  access_config            = var.access_config
-  access_entry_map         = local.access_entry_map
-  access_entries_for_nodes = local.access_entries_for_nodes
+  access_config              = var.access_config
+  access_entry_map           = local.access_entry_map
+  access_entries             = local.github_actions_access_entry
+  access_policy_associations = local.github_actions_access_policy
+  access_entries_for_nodes   = local.access_entries_for_nodes
 
 
   allowed_security_group_ids   = var.allowed_security_groups
