@@ -166,10 +166,9 @@ module "eks_cluster" {
 
   access_config              = var.access_config
   access_entry_map           = local.access_entry_map
-  access_entries             = local.github_actions_access_entry
-  access_policy_associations = local.github_actions_access_policy
+  access_entries             = local.overridable_access_entry
+  access_policy_associations = local.overridable_access_policy
   access_entries_for_nodes   = local.access_entries_for_nodes
-
 
   allowed_security_group_ids   = var.allowed_security_groups
   allowed_cidr_blocks          = local.allowed_cidr_blocks
