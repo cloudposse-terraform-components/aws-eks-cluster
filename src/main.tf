@@ -50,7 +50,13 @@ locals {
     }
   }
 
-  access_entry_map = merge(local.aws_team_roles_access_entry_map, local.aws_sso_access_entry_map, local.iam_roles_access_entry_map, local.iam_users_access_entry_map)
+  access_entry_map = merge(
+    local.aws_sso_access_entry_map,
+    local.aws_team_roles_access_entry_map,
+    local.iam_roles_access_entry_map,
+    local.iam_users_access_entry_map,
+    local.overridable_access_map
+  )
 
   # If Karpenter IAM role is enabled, give it access to the cluster to allow the nodes launched by Karpenter to join the EKS cluster
   karpenter_role_arn = one(aws_iam_role.karpenter[*].arn)

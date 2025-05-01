@@ -4,5 +4,6 @@ locals {
   #
   # For example, we use this to add a policy for the GitHub Actions OIDC role
   overridable_access_entry  = []
+  overridable_access_map    = {}
   overridable_access_policy = []
 }
