@@ -18,7 +18,7 @@ data "aws_subnets" "private" {
 
 module "az_abbreviation" {
   source  = "cloudposse/utils/aws"
-  version = "1.3.0"
+  version = "1.4.0"
 }
 
 locals {
