@@ -8,7 +8,7 @@ terraform {
       # Windows support starts at 4.48 https://github.com/hashicorp/terraform-provider-aws/blob/main/CHANGELOG.md#4480-december-19-2022
       # SSM parameter `insecure_value` starts at 5.8
       source  = "hashicorp/aws"
-      version = ">= 5.8"
+      version = ">= 5.8, < 6.0.0"
     }
     random = {
       source  = "hashicorp/random"
@@ -19,4 +19,3 @@ terraform {
       version = ">= 3.0"
     }
   }
-}
