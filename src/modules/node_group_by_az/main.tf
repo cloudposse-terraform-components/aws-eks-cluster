@@ -38,7 +38,7 @@ locals {
 
 module "eks_node_group" {
   source  = "cloudposse/eks-node-group/aws"
-  version = "3.3.1"
+  version = "3.3.2"
 
   enabled = local.enabled
 
