@@ -266,7 +266,7 @@ components:
           - aws_team_role: planner
             groups:
               - idp:observer
-          - aws_team: terraform
+          - aws_team_role: terraform
             groups:
               - system:masters
 
