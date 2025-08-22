@@ -15,8 +15,7 @@ description: |-
   > would need to be resolved for this component to properly configure the upstream modules for Windows nodes. If you need
   > Windows nodes, please experiment and be on the lookout for issues, and then report any issues to Cloud Posse.
 
-  ## Usage
-
+usage: |-
   **Stack Level**: Regional
 
   Here's an example snippet for how to use this component.
@@ -475,14 +474,13 @@ description: |-
   <!-- prettier-ignore-start -->
   <!-- prettier-ignore-end -->
 
-  ## Related How-to Guides
-
-  - [EKS Foundational Platform](https://docs.cloudposse.com/layers/eks/)
-
-  ## References
-
-  - [cloudposse/terraform-aws-components](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/cluster) -
-    Cloud Posse's upstream component
+references:
+  - name: EKS Foundational Platform
+    url: https://docs.cloudposse.com/layers/eks/
+    description: 
+  - name: cloudposse-terraform-components
+    url: https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/cluster
+    description: Cloud Posse's upstream component
 tags:
   - component/eks/cluster
   - layer/eks
@@ -510,4 +508,3 @@ related:
     description: "Atmos is like docker-compose but for your infrastructure"
     url: "https://atmos.tools"
 contributors: [] # If included generates contribs
-references: []
