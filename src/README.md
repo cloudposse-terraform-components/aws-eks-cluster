@@ -246,7 +246,7 @@ components:
           - aws_team_role: planner
             groups:
               - idp:observer
-          - aws_team: terraform
+          - aws_team_role: terraform
             groups:
               - system:masters
 
@@ -477,7 +477,19 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
   to be deployed to Fargate, or has dependencies that Terraform cannot detect automatically.
 
 <!-- prettier-ignore-start -->
-<!-- BEGINNING OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
+<!-- prettier-ignore-end -->
+
+## Related How-to Guides
+
+- [EKS Foundational Platform](https://docs.cloudposse.com/layers/eks/)
+
+## References
+
+- [cloudposse/terraform-aws-components](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/cluster) -
+  Cloud Posse's upstream component
+
+
+<!-- markdownlint-disable -->
 ## Requirements
 
 | Name | Version |
@@ -628,16 +640,15 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 | <a name="output_karpenter_iam_role_arn"></a> [karpenter\_iam\_role\_arn](#output\_karpenter\_iam\_role\_arn) | Karpenter IAM Role ARN |
 | <a name="output_karpenter_iam_role_name"></a> [karpenter\_iam\_role\_name](#output\_karpenter\_iam\_role\_name) | Karpenter IAM Role name |
 | <a name="output_vpc_cidr"></a> [vpc\_cidr](#output\_vpc\_cidr) | The CIDR of the VPC where this cluster is deployed. |
-<!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
-<!-- prettier-ignore-end -->
+<!-- markdownlint-restore -->
 
-## Related How-to Guides
 
-- [EKS Foundational Platform](https://docs.cloudposse.com/layers/eks/)
 
 ## References
 
-- [cloudposse/terraform-aws-components](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/cluster) -
-  Cloud Posse's upstream component
+
+
+
 
 [<img src="https://cloudposse.com/logo-300x69.svg" height="32" align="right"/>](https://cpco.io/homepage?utm_source=github&utm_medium=readme&utm_campaign=cloudposse-terraform-components/aws-eks-cluster&utm_content=)
+
