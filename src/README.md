@@ -18,7 +18,6 @@ profiles.
 > Windows nodes, there are likely issues around incorrect or insufficient IAM permissions or other configuration that
 > would need to be resolved for this component to properly configure the upstream modules for Windows nodes. If you need
 > Windows nodes, please experiment and be on the lookout for issues, and then report any issues to Cloud Posse.
-
 ## Usage
 
 **Stack Level**: Regional
@@ -479,15 +478,6 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 <!-- prettier-ignore-start -->
 <!-- prettier-ignore-end -->
 
-## Related How-to Guides
-
-- [EKS Foundational Platform](https://docs.cloudposse.com/layers/eks/)
-
-## References
-
-- [cloudposse/terraform-aws-components](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/cluster) -
-  Cloud Posse's upstream component
-
 
 <!-- markdownlint-disable -->
 ## Requirements
@@ -646,6 +636,10 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 
 ## References
 
+
+- [EKS Foundational Platform](https://docs.cloudposse.com/layers/eks/) - %!s(<nil>)
+
+- [cloudposse-terraform-components](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/cluster) - Cloud Posse's upstream component
 
 
 
