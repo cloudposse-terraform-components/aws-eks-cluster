@@ -129,7 +129,7 @@ module "coredns_fargate_profile" {
   count = local.coredns_enabled && var.deploy_addons_to_fargate ? 1 : 0
 
   source  = "cloudposse/eks-fargate-profile/aws"
-  version = "1.3.0"
+  version = "1.3.1"
 
   subnet_ids                              = local.private_subnet_ids
   cluster_name                            = local.eks_cluster_id
@@ -176,7 +176,7 @@ module "aws_ebs_csi_driver_fargate_profile" {
   count = local.aws_ebs_csi_driver_enabled && var.deploy_addons_to_fargate ? 1 : 0
 
   source  = "cloudposse/eks-fargate-profile/aws"
-  version = "1.3.0"
+  version = "1.3.1"
 
   subnet_ids           = local.private_subnet_ids
   cluster_name         = local.eks_cluster_id

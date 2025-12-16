@@ -11,7 +11,7 @@ module "fargate_pod_execution_role" {
   count = local.fargate_cluster_pod_execution_role_needed ? 1 : 0
 
   source  = "cloudposse/eks-fargate-profile/aws"
-  version = "1.3.0"
+  version = "1.3.1"
 
   subnet_ids           = local.private_subnet_ids
   cluster_name         = local.eks_cluster_id
@@ -30,7 +30,7 @@ module "fargate_pod_execution_role" {
 ###############################################################################
 module "fargate_profile" {
   source  = "cloudposse/eks-fargate-profile/aws"
-  version = "1.3.0"
+  version = "1.3.1"
 
   for_each = local.fargate_profiles
 
