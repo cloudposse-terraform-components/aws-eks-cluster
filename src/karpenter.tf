@@ -158,7 +158,7 @@ data "aws_iam_policy_document" "ecr_public_readonly" {
       "ecr-public:ListTagsForResource",
       "ecr-public:DescribeImageTags"
     ]
-    resources = ["*"]
+    resources = var.karpenter_ecr_public_resources
   }
 
   statement {

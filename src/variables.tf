@@ -466,6 +466,13 @@ variable "karpenter_ecr_public_enabled" {
   nullable    = false
 }
 
+variable "karpenter_ecr_public_resources" {
+  type        = list(string)
+  description = "List of ECR Public resource ARNs to scope the read-only policy. Use `[\"*\"]` for all repositories or specify ARNs to restrict access."
+  default     = ["*"]
+  nullable    = false
+}
+
 variable "fargate_profiles" {
   type = map(object({
     kubernetes_namespace = string
