@@ -138,3 +138,50 @@ resource "aws_iam_role_policy_attachment" "ipv6_eks_cni_policy" {
   role       = one(aws_iam_role.karpenter[*].name)
   policy_arn = one(aws_iam_policy.ipv6_eks_cni_policy[*].arn)
 }
+
+# ECR Public read-only access policy for Karpenter nodes
+# Allows authenticated pulls from public.ecr.aws to avoid throttling
+data "aws_iam_policy_document" "ecr_public_readonly" {
+  count = local.karpenter_iam_role_enabled && var.karpenter_ecr_public_enabled ? 1 : 0
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "ecr-public:GetAuthorizationToken",
+      "ecr-public:BatchGetImage",
+      "ecr-public:GetDownloadUrlForLayer",
+      "ecr-public:DescribeRepositories",
+      "ecr-public:DescribeImages",
+      "ecr-public:ListImages",
+      "ecr-public:GetRepositoryCatalogData",
+      "ecr-public:GetRegistryCatalogData",
+      "ecr-public:ListTagsForResource",
+      "ecr-public:DescribeImageTags"
+    ]
+    resources = var.karpenter_ecr_public_resources
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "sts:GetServiceBearerToken"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "ecr_public_readonly" {
+  count = local.karpenter_iam_role_enabled && var.karpenter_ecr_public_enabled ? 1 : 0
+
+  name        = "${module.this.id}-ECRPublicReadOnly"
+  description = "ECR Public read-only access for Karpenter nodes"
+  policy      = data.aws_iam_policy_document.ecr_public_readonly[0].json
+  tags        = module.karpenter_label.tags
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_public_readonly" {
+  count = local.karpenter_iam_role_enabled && var.karpenter_ecr_public_enabled ? 1 : 0
+
+  role       = one(aws_iam_role.karpenter[*].name)
+  policy_arn = one(aws_iam_policy.ecr_public_readonly[*].arn)
+}
