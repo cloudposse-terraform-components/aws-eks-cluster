@@ -430,15 +430,26 @@ variable "allow_ingress_from_vpc_accounts" {
   type = any
 
   description = <<-EOF
-    List of account contexts to pull VPC ingress CIDR and add to cluster security group.
+    List of account contexts whose VPC CIDRs should be allowed ingress to the cluster security group.
+    Each entry identifies an account by tenant/stage/environment and triggers a remote state lookup
+    to retrieve that account's VPC CIDR.
+
+    The optional `vpc_cidr` field bypasses the remote state lookup for that entry when set,
+    using the provided value directly instead. This allows deployments that do not have
+    cross-account remote state access to resolve CIDRs ahead of time (e.g. via Atmos
+    `!terraform.state` functions in stack YAML). Entries without `vpc_cidr` continue using
+    remote state lookups unchanged, so migration can be done one entry at a time.
 
     e.g.
 
-    {
-      environment = "ue2",
-      stage       = "auto",
-      tenant      = "core"
-    }
+    allow_ingress_from_vpc_accounts:
+      - tenant: core
+        stage: auto
+        environment: use2
+        vpc_cidr: "10.8.0.0/16"   # optional: bypasses remote state when set
+      - tenant: core
+        stage: network
+        environment: use2
   EOF
 
   default  = []

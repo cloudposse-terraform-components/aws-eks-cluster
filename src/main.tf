@@ -88,6 +88,7 @@ locals {
     [
       for k in keys(module.vpc_ingress) :
       module.vpc_ingress[k].outputs.vpc_cidr
+      if try(module.vpc_ingress[k].outputs.vpc_cidr, null) != null
     ]
   )
 

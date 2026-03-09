@@ -43,5 +43,13 @@ module "vpc_ingress" {
   stage       = try(each.value.stage, module.this.stage)
   tenant      = try(each.value.tenant, module.this.tenant)
 
+  # When the entry provides a vpc_cidr directly, bypass remote state entirely.
+  # Entries without vpc_cidr continue using remote state as before.
+  bypass = try(each.value.vpc_cidr, null) != null
+
+  defaults = {
+    vpc_cidr = try(each.value.vpc_cidr, null)
+  }
+
   context = module.this.context
 }
