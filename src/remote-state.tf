@@ -4,14 +4,6 @@ locals {
   } : {}
 }
 
-module "iam_arns" {
-  source = "../../account-map/modules/roles-to-principals"
-
-  role_map = local.role_map
-
-  context = module.this.context
-}
-
 module "vpc" {
   source  = "cloudposse/stack-config/yaml//modules/remote-state"
   version = "1.8.0"
