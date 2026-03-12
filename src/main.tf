@@ -4,12 +4,8 @@ locals {
 
   attributes = flatten(concat(module.this.attributes, [var.color]))
 
-  this_account_name = module.iam_roles.current_account_account_name
-
-  role_map = { (local.this_account_name) = var.aws_team_roles_rbac[*].aws_team_role }
-
   aws_team_roles_auth = [for role in var.aws_team_roles_rbac : {
-    rolearn = module.iam_arns.principals_map[local.this_account_name][role.aws_team_role]
+    rolearn = format("arn:aws:iam::%s:role/%s-%s-gbl-%s-%s", local.current_account_id, module.this.namespace, module.this.tenant, module.this.stage, role.aws_team_role)
     groups  = role.groups
   }]
 
@@ -88,6 +84,7 @@ locals {
     [
       for k in keys(module.vpc_ingress) :
       module.vpc_ingress[k].outputs.vpc_cidr
+      if try(module.vpc_ingress[k].outputs.vpc_cidr, null) != null
     ]
   )
 
