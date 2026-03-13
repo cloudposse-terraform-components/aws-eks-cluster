@@ -4,17 +4,6 @@ locals {
 
   attributes = flatten(concat(module.this.attributes, [var.color]))
 
-  aws_team_roles_auth = [for role in var.aws_team_roles_rbac : {
-    rolearn = format("arn:aws:iam::%s:role/%s-%s-gbl-%s-%s", local.current_account_id, module.this.namespace, module.this.tenant, module.this.stage, role.aws_team_role)
-    groups  = role.groups
-  }]
-
-  aws_team_roles_access_entry_map = {
-    for role in local.aws_team_roles_auth : role.rolearn => {
-      kubernetes_groups = role.groups
-    }
-  }
-
   ## For future reference, as we enhance support for EKS Policies
   ## and namespace limits, here are some examples of entries:
   #  access_entry_map = {
