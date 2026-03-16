@@ -58,8 +58,7 @@ logs:
   file: "/dev/stderr"
   # Supported log levels: Trace, Debug, Info, Warning, Off
   level: Info
-env:
-  TF_LOG: DEBUG
+
 settings:
   # Can also be set using 'ATMOS_SETTINGS_LIST_MERGE_STRATEGY' environment variable, or '--settings-list-merge-strategy' command-line argument
   list_merge_strategy: replace
