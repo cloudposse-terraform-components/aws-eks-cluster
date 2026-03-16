@@ -57,7 +57,7 @@ workflows:
 logs:
   file: "/dev/stdout"
   # Supported log levels: Trace, Debug, Info, Warning, Off
-  level: Info
+  level: Debug
 
 settings:
   # Can also be set using 'ATMOS_SETTINGS_LIST_MERGE_STRATEGY' environment variable, or '--settings-list-merge-strategy' command-line argument
