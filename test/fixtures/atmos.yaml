@@ -55,9 +55,9 @@ workflows:
 
 # https://github.com/cloudposse/atmos/releases/tag/v1.33.0
 logs:
-  file: "/dev/stdout"
+  file: "/dev/stderr"
   # Supported log levels: Trace, Debug, Info, Warning, Off
-  level: Debug
+  level: Info
 env:
   TF_LOG: DEBUG
 settings:
