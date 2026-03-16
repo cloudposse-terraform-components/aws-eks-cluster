@@ -2,7 +2,6 @@ components:
   terraform:
     vpc:
       metadata:
-        workspace: default-test
         component: vpc
       vars:
         name: "vpc"
