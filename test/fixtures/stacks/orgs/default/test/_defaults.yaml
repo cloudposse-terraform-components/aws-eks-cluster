@@ -63,4 +63,4 @@ components:
           identity_account_account_name: default-test
           root_account_account_name: default-test
           terraform_roles:
-            default-test: ''
+            default-test: ""

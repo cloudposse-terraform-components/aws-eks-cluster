@@ -4,14 +4,6 @@ locals {
   } : {}
 }
 
-module "iam_arns" {
-  source = "../../account-map/modules/roles-to-principals"
-
-  role_map = local.role_map
-
-  context = module.this.context
-}
-
 module "vpc" {
   source  = "cloudposse/stack-config/yaml//modules/remote-state"
   version = "1.8.0"
@@ -42,6 +34,14 @@ module "vpc_ingress" {
   environment = try(each.value.environment, module.this.environment)
   stage       = try(each.value.stage, module.this.stage)
   tenant      = try(each.value.tenant, module.this.tenant)
+
+  # When the entry provides a vpc_cidr directly, bypass remote state entirely.
+  # Entries without vpc_cidr continue using remote state as before.
+  bypass = try(each.value.vpc_cidr, null) != null
+
+  defaults = {
+    vpc_cidr = try(each.value.vpc_cidr, null)
+  }
 
   context = module.this.context
 }
