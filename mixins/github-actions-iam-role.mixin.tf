@@ -48,7 +48,7 @@ module "gha_role_name" {
 }
 
 module "gha_assume_role" {
-  source = "github.com/cloudposse-terraform-components/aws-account-map//src/modules/team-assume-role-policy?ref=v1.536.1"
+  source = "github.com/cloudposse-terraform-components/aws-account-map//src/modules/team-assume-role-policy?ref=v1.537.2"
 
   trusted_github_repos = var.github_actions_allowed_repos
   privileged           = var.privileged
