@@ -56,8 +56,8 @@ locals {
     # probably has other deficiencies that would prevent it from working with Windows nodes,
     # so we will stick with just saying Windows is not supported until we have some need for it.
     local.karpenter_iam_role_enabled ? [local.karpenter_role_arn] : [],
-    # Auto Mode node role needs EC2_LINUX access to join the cluster
-    local.auto_mode_enabled && local.auto_mode_node_role_arn != null ? [local.auto_mode_node_role_arn] : [],
+    # Auto Mode node role access entry is automatically created by EKS when Auto Mode is enabled,
+    # so we do not need to add it here. Adding it would cause a 409 ResourceInUseException.
   ) : []
 
   # For backwards compatibility, we need to add the unmanaged worker role ARNs, but
