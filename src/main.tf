@@ -56,6 +56,8 @@ locals {
     # probably has other deficiencies that would prevent it from working with Windows nodes,
     # so we will stick with just saying Windows is not supported until we have some need for it.
     local.karpenter_iam_role_enabled ? [local.karpenter_role_arn] : [],
+    # Auto Mode node role needs EC2_LINUX access to join the cluster
+    local.auto_mode_enabled && local.auto_mode_node_role_arn != null ? [local.auto_mode_node_role_arn] : [],
   ) : []
 
   # For backwards compatibility, we need to add the unmanaged worker role ARNs, but
@@ -150,8 +152,10 @@ module "utils" {
 }
 
 module "eks_cluster" {
-  source  = "cloudposse/eks-cluster/aws"
-  version = "4.8.0"
+  # TODO: Switch to released version once PR 1 (Auto Mode support) is merged and tagged
+  # source  = "cloudposse/eks-cluster/aws"
+  # version = "4.9.0"
+  source = "git::https://github.com/cloudposse/terraform-aws-eks-cluster.git?ref=feature/auto-mode"
 
   region     = var.region
   attributes = local.attributes
@@ -173,9 +177,25 @@ module "eks_cluster" {
   public_access_cidrs          = var.public_access_cidrs
   subnet_ids                   = var.cluster_private_subnets_only ? local.private_subnet_ids : concat(local.private_subnet_ids, local.public_subnet_ids)
 
+  # EKS Auto Mode
+  compute_config = {
+    enabled       = var.auto_mode_enabled
+    node_pools    = var.auto_mode_node_pools
+    node_role_arn = local.auto_mode_node_role_arn
+  }
+
+  storage_config = {
+    block_storage = {
+      enabled = var.auto_mode_enabled
+    }
+  }
+
+  elastic_load_balancing = {
+    enabled = var.auto_mode_enabled
+  }
 
   # EKS addons
-  addons = local.addons
+  addons = local.effective_addons
 
   addons_depends_on = var.addons_depends_on ? concat(
     [module.region_node_group], local.addons_depends_on,

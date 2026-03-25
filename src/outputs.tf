@@ -68,6 +68,21 @@ output "eks_node_group_statuses" {
   value       = compact([for group in local.node_groups : group.eks_node_group_status])
 }
 
+output "auto_mode_enabled" {
+  description = "Whether EKS Auto Mode is enabled on the cluster"
+  value       = var.auto_mode_enabled
+}
+
+output "auto_mode_node_role_arn" {
+  description = "ARN of the IAM role used by Auto Mode nodes"
+  value       = local.auto_mode_enabled ? local.auto_mode_node_role_arn : null
+}
+
+output "auto_mode_node_role_name" {
+  description = "Name of the IAM role used by Auto Mode nodes"
+  value       = one(aws_iam_role.auto_mode_node[*].name)
+}
+
 output "karpenter_iam_role_arn" {
   description = "Karpenter IAM Role ARN"
   value       = one(aws_iam_role.karpenter[*].arn)
