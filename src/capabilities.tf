@@ -10,11 +10,14 @@ locals {
     for k, v in local.enabled_capabilities : k => v if v.role_arn == null
   }
 
-  # Build the map passed to the module (strip component-only fields, inject role ARNs)
+  # Build the map passed to the module (strip component-only fields, inject role ARNs).
+  # Set create_iam_role = false so the module doesn't try to create its own roles --
+  # the component creates them with richer labeling and policy attachments.
   module_capabilities = {
     for k, v in var.capabilities : k => {
       enabled                   = v.enabled
       type                      = v.type
+      create_iam_role           = false # component manages IAM roles, not the module
       role_arn                  = v.role_arn != null ? v.role_arn : try(aws_iam_role.capability[k].arn, null)
       delete_propagation_policy = v.delete_propagation_policy
       configuration             = v.configuration
