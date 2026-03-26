@@ -272,3 +272,188 @@ aws eks list-capabilities --cluster-name <cluster-name>
 # Describe a specific capability
 aws eks describe-capability --cluster-name <cluster-name> --capability-name argocd
 ```
+
+## Migrating from Self-Managed Tools to EKS Capabilities
+
+If you already have Argo CD, ACK, or KRO installed via Helm charts (e.g., via CloudPosse
+components), follow these migration guides. Each tool has a different migration model.
+
+### Migrating Argo CD (cutover migration)
+
+Argo CD migration is a **cutover** -- you cannot run self-managed and EKS-managed Argo CD
+simultaneously. Plan for ~70 minutes of migration time.
+
+**Before migrating**, review unsupported features in EKS-managed Argo CD:
+- Notifications controller is not available
+- Config Management Plugins (CMPs) are not supported
+- Custom SSO providers are not supported (AWS Identity Center only)
+- Custom Lua health assessment scripts are not supported
+- Direct access to configuration ConfigMaps is not available
+- Fixed 120-second sync timeout cannot be changed
+
+**Step 1: Export your Argo CD resources**
+
+Back up all Applications, ApplicationSets, and AppProjects:
+
+```bash
+kubectl get applications -n argocd -o yaml > applications-backup.yaml
+kubectl get applicationsets -n argocd -o yaml > applicationsets-backup.yaml
+kubectl get appprojects -n argocd -o yaml > appprojects-backup.yaml
+```
+
+These resources use standard `argoproj.io/v1alpha1` API and work without modification on the
+EKS-managed capability.
+
+**Step 2: Scale down self-managed Argo CD**
+
+```bash
+kubectl scale deployment/argocd-application-controller --replicas=0 -n argocd
+kubectl scale deployment/argocd-server --replicas=0 -n argocd
+kubectl scale deployment/argocd-repo-server --replicas=0 -n argocd
+kubectl scale deployment/argocd-redis --replicas=0 -n argocd
+```
+
+**Step 3: Enable the EKS Argo CD capability**
+
+Add the capability to your stack configuration:
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        capabilities:
+          argocd:
+            type: ARGOCD
+            configuration:
+              argo_cd:
+                namespace: argocd
+                aws_idc:
+                  idc_instance_arn: "arn:aws:sso:::instance/ssoins-abc123"
+                rbac_role_mapping:
+                  - role: ADMIN
+                    identity:
+                      - id: "<identity-center-user-or-group-id>"
+                        type: SSO_GROUP
+```
+
+Apply the change. The EKS-managed Argo CD will start up and pick up existing Application
+resources in the namespace.
+
+**Step 4: Disable the self-managed Argo CD component**
+
+Set `enabled: false` on your `eks/argocd` component (or remove it) and apply to clean up
+the Helm release and its IAM resources.
+
+**Step 5: Verify**
+
+```bash
+# Check capability status
+aws eks describe-capability --cluster-name <name> --capability-name argocd
+
+# Verify applications are syncing
+argocd app list
+```
+
+**RBAC mapping**: EKS-managed Argo CD uses AWS Identity Center instead of Argo CD's built-in RBAC.
+Map your existing roles to the three available roles: `ADMIN`, `EDITOR`, `VIEWER`.
+
+### Migrating ACK (gradual migration)
+
+ACK migration supports **gradual, side-by-side operation**. You can run self-managed and
+EKS-managed ACK controllers simultaneously with proper coordination.
+
+**Step 1: Update self-managed ACK leader election namespace**
+
+For each ACK controller, update leader election to use `kube-system`:
+
+```bash
+helm upgrade --install ack-s3-controller \
+  oci://public.ecr.aws/aws-controllers-k8s/s3-chart \
+  --namespace ack-system \
+  --set leaderElection.namespace=kube-system
+```
+
+This prevents conflicts when the EKS-managed capability starts.
+
+**Step 2: Enable the EKS ACK capability**
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        capabilities:
+          ack:
+            type: ACK
+            iam_policy_arns:
+              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+              - "arn:aws:iam::aws:policy/AmazonRDSFullAccess"
+              # Add policies for each AWS service you manage via ACK
+```
+
+The EKS-managed ACK capability will recognize existing ACK custom resources and assume
+reconciliation responsibility.
+
+**Step 3: Scale down self-managed ACK controllers**
+
+Gradually remove self-managed controllers as the managed capability takes over:
+
+```bash
+helm uninstall ack-s3-controller -n ack-system
+```
+
+**Step 4: Disable the self-managed ACK component**
+
+Set `enabled: false` on your ACK component and apply.
+
+**Key difference**: EKS-managed ACK uses a capability IAM role (trusted by
+`capabilities.eks.amazonaws.com`) instead of IRSA. No service account annotations are needed.
+Existing ACK-managed AWS resources continue to work without modification.
+
+### Migrating KRO (gradual migration)
+
+KRO migration supports **gradual, side-by-side operation**, similar to ACK.
+
+**Step 1: Update self-managed KRO leader election namespace**
+
+```bash
+helm upgrade --install kro \
+  oci://ghcr.io/awslabs/kro/kro-chart \
+  --namespace kro \
+  --set leaderElection.namespace=kube-system
+```
+
+**Step 2: Enable the EKS KRO capability**
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        capabilities:
+          kro:
+            type: KRO
+```
+
+The managed capability uses the same upstream KRO controllers. ResourceGraphDefinitions and
+instances work identically.
+
+**Step 3: Scale down and remove self-managed KRO**
+
+```bash
+helm uninstall kro -n kro
+```
+
+### Delete Propagation Policy
+
+When removing a capability from Terraform, the `delete_propagation_policy = RETAIN` (currently
+the only supported value) means:
+
+- **Kubernetes resources are retained** -- Applications, ACK resources, ResourceGraphDefinitions
+  all remain in the cluster
+- **AWS resources managed by ACK are governed by their individual deletion policies** -- they may
+  be retained or deleted based on the ACK resource's own `deletionPolicy` annotation
+
+> **Important**: Delete all Kubernetes resources managed by a capability **before** removing the
+> capability itself to avoid orphaned resources that are no longer reconciled.
