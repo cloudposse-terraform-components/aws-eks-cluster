@@ -17,10 +17,13 @@ locals {
   auto_mode_partition = local.auto_mode_node_role_needed ? one(data.aws_partition.auto_mode[*].partition) : null
 }
 
+# This is intentionally a check (warning), not a hard validation, because
+# brownfield migration (UPGRADING.md Step 2) requires both to be true
+# temporarily while transitioning from self-managed Karpenter to Auto Mode.
 check "karpenter_auto_mode_conflict" {
   assert {
     condition     = !(var.auto_mode_enabled && var.karpenter_iam_role_enabled)
-    error_message = "karpenter_iam_role_enabled and auto_mode_enabled cannot both be true. Auto Mode includes managed Karpenter."
+    error_message = "Both karpenter_iam_role_enabled and auto_mode_enabled are true. Auto Mode includes managed Karpenter, so self-managed Karpenter is redundant. This is expected only during brownfield migration (see UPGRADING.md Step 2). Set karpenter_iam_role_enabled = false once migration is complete."
   }
 }
 

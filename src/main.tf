@@ -178,19 +178,19 @@ module "eks_cluster" {
   subnet_ids                   = var.cluster_private_subnets_only ? local.private_subnet_ids : concat(local.private_subnet_ids, local.public_subnet_ids)
 
   # EKS Auto Mode
-  compute_config = {
+  auto_mode_compute_config = {
     enabled       = var.auto_mode_enabled
     node_pools    = var.auto_mode_node_pools
     node_role_arn = local.auto_mode_node_role_arn
   }
 
-  storage_config = {
+  auto_mode_storage_config = {
     block_storage = {
       enabled = var.auto_mode_enabled
     }
   }
 
-  elastic_load_balancing = {
+  auto_mode_elastic_load_balancing = {
     enabled = var.auto_mode_enabled
   }
 
