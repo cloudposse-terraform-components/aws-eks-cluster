@@ -209,3 +209,66 @@ To revert from Auto Mode to self-managed:
 
 > **Note**: You cannot simply remove the Auto Mode blocks -- you must explicitly set
 > `auto_mode_enabled: false` first, then apply, before removing the configuration entirely.
+
+## EKS Capabilities (Argo CD, ACK, KRO)
+
+EKS Capabilities are independently-enableable managed platform features that work on any cluster
+(Auto Mode or standard). They require AWS provider `>= 6.25.0`.
+
+### Enabling Capabilities
+
+Add capabilities to your stack configuration:
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        capabilities:
+          argocd:
+            type: ARGOCD
+            configuration:
+              argo_cd:
+                namespace: argocd
+                aws_idc:
+                  idc_instance_arn: "arn:aws:sso:::instance/ssoins-abc123"
+                rbac_role_mapping:
+                  - role: ADMIN
+                    identity:
+                      - id: "user-id-here"
+                        type: SSO_USER
+          ack:
+            type: ACK
+            iam_policy_arns:
+              - "arn:aws:iam::aws:policy/AmazonRDSFullAccess"
+              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+          kro:
+            type: KRO
+```
+
+### IAM Roles
+
+Each capability requires its own IAM role with a trust policy for `capabilities.eks.amazonaws.com`.
+
+- **Auto-created**: When `role_arn` is not provided, a role is created automatically
+- **Custom**: Provide `role_arn` to use an existing role
+- **ACK policies**: Use `iam_policy_arns` to attach service-specific IAM policies to the
+  auto-created role (e.g., `AmazonRDSFullAccess` for managing RDS instances)
+
+### Provider Version Upgrade
+
+This component requires AWS provider `>= 6.25.0`. If upgrading from 5.x:
+
+1. Review the [AWS Provider 6.0 Upgrade Guide](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/guides/version-6-upgrade)
+2. Update your provider lock file: `terraform init -upgrade`
+3. Run `terraform plan` to check for breaking changes before applying
+
+### Verification
+
+```bash
+# List capabilities on a cluster
+aws eks list-capabilities --cluster-name <cluster-name>
+
+# Describe a specific capability
+aws eks describe-capability --cluster-name <cluster-name> --capability-name argocd
+```

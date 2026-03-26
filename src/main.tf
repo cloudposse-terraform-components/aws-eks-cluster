@@ -194,6 +194,9 @@ module "eks_cluster" {
     enabled = var.auto_mode_enabled
   }
 
+  # EKS Capabilities (Argo CD, ACK, KRO)
+  capabilities = local.module_capabilities
+
   # EKS addons
   addons = local.effective_addons
 

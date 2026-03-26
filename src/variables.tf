@@ -537,6 +537,49 @@ variable "auto_mode_upgrade" {
   nullable    = false
 }
 
+variable "capabilities" {
+  type = map(object({
+    enabled                   = optional(bool, true)
+    type                      = string # ACK, ARGOCD, KRO
+    role_arn                  = optional(string, null)
+    iam_policy_arns           = optional(list(string), [])
+    delete_propagation_policy = optional(string, "RETAIN")
+    configuration = optional(object({
+      argo_cd = optional(object({
+        namespace = optional(string, "argocd")
+        aws_idc = optional(object({
+          idc_instance_arn = string
+          idc_region       = optional(string, null)
+        }), null)
+        network_access = optional(object({
+          vpce_ids = optional(list(string), [])
+        }), null)
+        rbac_role_mapping = optional(list(object({
+          role = string # ADMIN, EDITOR, VIEWER
+          identity = list(object({
+            id   = string
+            type = string # SSO_USER, SSO_GROUP
+          }))
+        })), [])
+      }), null)
+    }), null)
+    create_timeout = optional(string, null)
+    update_timeout = optional(string, null)
+    delete_timeout = optional(string, null)
+  }))
+
+  description = <<-EOT
+    Map of EKS Capabilities to enable on the cluster. Each key is the capability
+    name (must be unique within the cluster). Supported types: ACK, ARGOCD, KRO.
+
+    When `role_arn` is null, an IAM role is automatically created with a trust
+    policy for `capabilities.eks.amazonaws.com`. Use `iam_policy_arns` to attach
+    additional IAM policies to the auto-created role (e.g., ACK service permissions).
+    EOT
+  default     = {}
+  nullable    = false
+}
+
 variable "fargate_profiles" {
   type = map(object({
     kubernetes_namespace = string

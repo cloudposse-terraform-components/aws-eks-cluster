@@ -83,6 +83,18 @@ output "auto_mode_node_role_name" {
   value       = one(aws_iam_role.auto_mode_node[*].name)
 }
 
+output "capabilities" {
+  description = "Map of enabled EKS Capabilities with their ARNs and types"
+  value       = module.eks_cluster.capabilities
+}
+
+output "capability_role_arns" {
+  description = "Map of capability IAM role ARNs (auto-created by this component)"
+  value = {
+    for k, v in aws_iam_role.capability : k => v.arn
+  }
+}
+
 output "karpenter_iam_role_arn" {
   description = "Karpenter IAM Role ARN"
   value       = one(aws_iam_role.karpenter[*].arn)
