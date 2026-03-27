@@ -50,7 +50,7 @@ data "aws_iam_policy_document" "auto_mode_node_assume_role" {
 
     principals {
       type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
+      identifiers = ["ec2.${data.aws_partition.auto_mode[0].dns_suffix}"]
     }
   }
 }

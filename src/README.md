@@ -347,6 +347,133 @@ For brownfield migration from an existing cluster, see [UPGRADING.md](./UPGRADIN
   PVCs created by one provisioner cannot mount on nodes managed by the other.
 - **CoreDNS runs as a systemd service** -- Custom CoreDNS ConfigMaps will not work on Auto Mode nodes.
 
+### EKS Capabilities
+
+[EKS Capabilities](https://docs.aws.amazon.com/eks/latest/userguide/capabilities.html) allow you to enable
+AWS-managed operational software directly on your cluster. Supported capability types:
+
+- **ARGOCD** -- Managed Argo CD for GitOps continuous delivery
+- **ACK** -- AWS Controllers for Kubernetes, enabling management of AWS resources via Kubernetes custom resources
+- **KRO** -- Kube Resource Orchestrator for composing Kubernetes resources
+
+Each capability requires an IAM role. You can either provide your own via `role_arn` or let the component
+create one automatically. Auto-created roles use a trust policy for `capabilities.eks.amazonaws.com` and
+can have additional IAM policies attached via `iam_policy_arns`.
+
+#### Argo CD capability
+
+> [!NOTE]
+>
+> The managed Argo CD capability requires [aws-sso](https://docs.aws.amazon.com/singlesignon/latest/userguide/what-is.html)
+> (IAM Identity Center) v3.0.1 or later for RBAC role mapping.
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        capabilities:
+          argocd:
+            type: ARGOCD
+            configuration:
+              argo_cd:
+                namespace: argocd
+                aws_idc:
+                  idc_instance_arn: "arn:aws:sso:::instance/ssoins-1234567890abcdef"
+                  # idc_region: null  # defaults to cluster region
+                rbac_role_mapping:
+                  - role: ADMIN
+                    identity:
+                      - id: "12345678-1234-1234-1234-123456789012" # SSO group ID
+                        type: SSO_GROUP
+                  - role: VIEWER
+                    identity:
+                      - id: "87654321-4321-4321-4321-210987654321"
+                        type: SSO_GROUP
+```
+
+When using [Atmos](https://atmos.tools), you can use `!terraform.state` lookups to resolve the SSO
+instance ARN and group IDs dynamically from the `aws-sso` component outputs instead of hardcoding them:
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        capabilities:
+          argocd:
+            type: ARGOCD
+            configuration:
+              argo_cd:
+                namespace: argocd
+                aws_idc:
+                  idc_instance_arn: !terraform.state aws-sso core-gbl-root ssoadmin_instance_arn
+                rbac_role_mapping:
+                  - role: ADMIN
+                    identity:
+                      - id: !terraform.state aws-sso core-gbl-root group_map["Managers"]
+                        type: SSO_GROUP
+```
+
+#### ACK capability
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        capabilities:
+          ack-s3:
+            type: ACK
+            iam_policy_arns:
+              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+```
+
+#### KRO capability
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        capabilities:
+          kro:
+            type: KRO
+```
+
+#### Combining multiple capabilities
+
+Multiple capabilities can be enabled simultaneously:
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        capabilities:
+          argocd:
+            type: ARGOCD
+            configuration:
+              argo_cd:
+                namespace: argocd
+                aws_idc:
+                  idc_instance_arn: "arn:aws:sso:::instance/ssoins-1234567890abcdef"
+                rbac_role_mapping:
+                  - role: ADMIN
+                    identity:
+                      - id: "12345678-1234-1234-1234-123456789012"
+                        type: SSO_GROUP
+          ack-s3:
+            type: ACK
+            iam_policy_arns:
+              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+          kro:
+            type: KRO
+```
+
+The component outputs `capabilities` (map of enabled capabilities with ARNs and types) and
+`capability_role_arns` (map of auto-created IAM role ARNs) for use by downstream components.
+
 ### Amazon EKS End-of-Life Dates
 
 When picking a Kubernetes version, be sure to review the
