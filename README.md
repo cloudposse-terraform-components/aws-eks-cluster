@@ -405,7 +405,8 @@ can have additional IAM policies attached via `iam_policy_arns`.
 > [!NOTE]
 >
 > The managed Argo CD capability requires [aws-sso](https://docs.aws.amazon.com/singlesignon/latest/userguide/what-is.html)
-> (IAM Identity Center) v3.0.1 or later for RBAC role mapping.
+> (IAM Identity Center) v3.0.1 or later for RBAC role mapping. The `group_map` output used in the
+> Atmos `!terraform.state` example below requires aws-sso v3.0.2 or later.
 
 ```yaml
 components:
