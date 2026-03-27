@@ -215,6 +215,19 @@ To revert from Auto Mode to self-managed:
 EKS Capabilities are independently-enableable managed platform features that work on any cluster
 (Auto Mode or standard). They require AWS provider `>= 6.25.0`.
 
+### Prerequisites for Argo CD Capability
+
+The Argo CD capability requires an AWS IAM Identity Center (SSO) instance ARN. If you are using
+the Cloud Posse `aws-sso` (Identity Center) component, you need **version 3.0.1 or later**, which
+adds the `identity_store_id` and `ssoadmin_instance_arn` outputs required for the Argo CD
+capability configuration.
+
+You can reference the SSO instance ARN dynamically using Atmos Terraform state lookups:
+
+```yaml
+idc_instance_arn: !terraform.output aws-sso core-gbl-root ssoadmin_instance_arn
+```
+
 ### Enabling Capabilities
 
 Add capabilities to your stack configuration:
@@ -231,12 +244,13 @@ components:
               argo_cd:
                 namespace: argocd
                 aws_idc:
-                  idc_instance_arn: "arn:aws:sso:::instance/ssoins-abc123"
+                  # Requires aws-sso component v3.0.1+ for this output
+                  idc_instance_arn: !terraform.output aws-sso core-gbl-root ssoadmin_instance_arn
                 rbac_role_mapping:
                   - role: ADMIN
                     identity:
-                      - id: "user-id-here"
-                        type: SSO_USER
+                      - id: "<identity-center-group-id>"
+                        type: SSO_GROUP
           ack:
             type: ACK
             iam_policy_arns:
