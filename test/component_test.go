@@ -172,9 +172,10 @@ func (s *ComponentSuite) TestAutoMode() {
 	nodeGroupCount := atmos.Output(s.T(), options, "eks_node_group_count")
 	assert.Equal(s.T(), nodeGroupCount, "0")
 
-	// Verify no Karpenter role
-	karpenterIamRoleArn := atmos.Output(s.T(), options, "karpenter_iam_role_arn")
-	assert.Empty(s.T(), karpenterIamRoleArn)
+	// Verify no Karpenter role (output is null when karpenter_iam_role_enabled is false,
+	// which cannot be queried individually via terraform output, so use OutputAll)
+	allOutputs := atmos.OutputAll(s.T(), options)
+	assert.Nil(s.T(), allOutputs["karpenter_iam_role_arn"])
 
 	// Verify only aws-efs-csi-driver addon is present (Auto Mode manages the rest)
 	eksAddonsVersions := atmos.OutputMapOfObjects(s.T(), options, "eks_addons_versions")
