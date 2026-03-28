@@ -152,10 +152,8 @@ module "utils" {
 }
 
 module "eks_cluster" {
-  # TODO: Switch to released version once PR 1 (Auto Mode support) is merged and tagged
-  # source  = "cloudposse/eks-cluster/aws"
-  # version = "4.9.0"
-  source = "git::https://github.com/cloudposse/terraform-aws-eks-cluster.git?ref=Benbentwo/eks-auto-mode"
+  source  = "cloudposse/eks-cluster/aws"
+  version = "4.9.0"
 
   region     = var.region
   attributes = local.attributes
