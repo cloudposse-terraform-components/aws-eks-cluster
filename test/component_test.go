@@ -136,6 +136,64 @@ func (s *ComponentSuite) TestBasic() {
 	s.DriftTest(component, stack, nil)
 }
 
+func (s *ComponentSuite) TestAutoMode() {
+	const component = "eks/cluster/auto-mode"
+	const stack = "default-test"
+	const awsRegion = "us-east-2"
+
+	defer s.DestroyAtmosComponent(s.T(), component, stack, nil)
+	options, _ := s.DeployAtmosComponent(s.T(), component, stack, nil)
+	assert.NotNil(s.T(), options)
+
+	accountId := aws.GetAccountId(s.T())
+	assert.NotNil(s.T(), accountId)
+
+	id := atmos.Output(s.T(), options, "eks_cluster_id")
+	assert.True(s.T(), strings.HasPrefix(id, "eg-default-ue2-test-"))
+
+	arn := atmos.Output(s.T(), options, "eks_cluster_arn")
+	assert.Equal(s.T(), arn, fmt.Sprintf("arn:aws:eks:%s:%s:cluster/%s", awsRegion, accountId, id))
+
+	version := atmos.Output(s.T(), options, "eks_cluster_version")
+	assert.Equal(s.T(), version, "1.31")
+
+	// Verify Auto Mode outputs
+	autoModeEnabled := atmos.Output(s.T(), options, "auto_mode_enabled")
+	assert.Equal(s.T(), autoModeEnabled, "true")
+
+	autoModeNodeRoleArn := atmos.Output(s.T(), options, "auto_mode_node_role_arn")
+	assert.True(s.T(), strings.HasPrefix(autoModeNodeRoleArn, fmt.Sprintf("arn:aws:iam::%s:role/", accountId)))
+	assert.True(s.T(), strings.Contains(autoModeNodeRoleArn, "auto-mode-node"))
+
+	autoModeNodeRoleName := atmos.Output(s.T(), options, "auto_mode_node_role_name")
+	assert.True(s.T(), strings.Contains(autoModeNodeRoleName, "auto-mode-node"))
+
+	// Verify no managed node groups
+	nodeGroupCount := atmos.Output(s.T(), options, "eks_node_group_count")
+	assert.Equal(s.T(), nodeGroupCount, "0")
+
+	// Verify no Karpenter role (output is null when karpenter_iam_role_enabled is false,
+	// which cannot be queried individually via terraform output, so use OutputAll)
+	allOutputs := atmos.OutputAll(s.T(), options)
+	assert.Nil(s.T(), allOutputs["karpenter_iam_role_arn"])
+
+	// Verify only aws-efs-csi-driver addon is present (Auto Mode manages the rest)
+	eksAddonsVersions := atmos.OutputMapOfObjects(s.T(), options, "eks_addons_versions")
+	assert.Equal(s.T(), len(eksAddonsVersions), 1)
+	assert.Equal(s.T(), eksAddonsVersions["aws-efs-csi-driver"], "v2.0.8-eksbuild.1")
+
+	// Verify cluster via AWS API
+	cluster := awsHelper.GetEksCluster(s.T(), context.Background(), awsRegion, id)
+	assert.Equal(s.T(), *cluster.Name, id)
+	assert.Equal(s.T(), string(cluster.Status), "ACTIVE")
+
+	// Verify Auto Mode compute config is enabled
+	assert.NotNil(s.T(), cluster.ComputeConfig)
+	assert.True(s.T(), *cluster.ComputeConfig.Enabled)
+
+	s.DriftTest(component, stack, nil)
+}
+
 func (s *ComponentSuite) TestEnabledFlag() {
 	const component = "eks/cluster/disabled"
 	const stack = "default-test"

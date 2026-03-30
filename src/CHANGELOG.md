@@ -1,3 +1,48 @@
+## Release 1.541.0
+
+### EKS Auto Mode and Capabilities
+
+#### Features
+
+- **EKS Auto Mode**: Added support for [EKS Auto Mode](https://docs.aws.amazon.com/eks/latest/userguide/automode.html),
+  where AWS manages compute (via managed Karpenter), networking (elastic load balancing), and storage (EBS block storage)
+  for the cluster. Enable with `auto_mode_enabled: true`. Requires Kubernetes 1.29+ and AWS provider >= 5.79.0.
+  - Automatically creates an IAM role for Auto Mode nodes with `AmazonEKSWorkerNodeMinimalPolicy` and
+    `AmazonEC2ContainerRegistryPullOnly` policies, or accepts a pre-existing role via `auto_mode_node_role_arn`.
+  - Configurable node pools via `auto_mode_node_pools` (defaults to `["general-purpose", "system"]`).
+  - Brownfield migration support via `auto_mode_upgrade` flag, which silently filters out Auto Mode-managed addons
+    (`vpc-cni`, `kube-proxy`, `coredns`, `aws-ebs-csi-driver`) during the transition.
+  - Includes a `check` block that warns if both `auto_mode_enabled` and `karpenter_iam_role_enabled` are true, since
+    Auto Mode includes managed Karpenter.
+
+- **EKS Capabilities**: Added support for [EKS Capabilities](https://docs.aws.amazon.com/eks/latest/userguide/capabilities.html)
+  (Argo CD, ACK, KRO) via the new `capabilities` variable. Each capability can have an auto-created IAM role with
+  configurable policy attachments, or accept a pre-existing role via `role_arn`.
+
+#### New Variables
+
+- `auto_mode_enabled` - Enable EKS Auto Mode
+- `auto_mode_node_pools` - Built-in node pools for Auto Mode
+- `auto_mode_node_role_arn` - ARN of an existing IAM role for Auto Mode nodes
+- `auto_mode_upgrade` - Brownfield migration flag for Auto Mode
+- `capabilities` - Map of EKS Capabilities to enable on the cluster
+
+#### New Outputs
+
+- `auto_mode_enabled` - Whether EKS Auto Mode is enabled
+- `auto_mode_node_role_arn` - ARN of the Auto Mode node IAM role
+- `auto_mode_node_role_name` - Name of the Auto Mode node IAM role
+- `capabilities` - Map of enabled EKS Capabilities with their ARNs and types
+- `capability_role_arns` - Map of capability IAM role ARNs
+
+#### Dependencies
+
+- Updated `cloudposse/eks-cluster/aws` module from v4.8.0 to v4.9.0
+
+#### Migration
+
+See [UPGRADING.md](UPGRADING.md) for detailed greenfield and brownfield migration guides.
+
 ## Release 1.468.0
 
 PR [#1072](https://github.com/cloudposse/terraform-aws-components/pull/1072)
@@ -461,11 +506,11 @@ these steps:
 
 1. Remove or scale to zero Pods any Deployments using the EFS file system.
 2. Remove (`terraform destroy`) the `eks/efs-controller` module from your cluster. This will also remove the `efs-sc`
-  StorageClass.
+   StorageClass.
 3. Use the
-  [eks/storage-class](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/storage-class)
-  module to create a replacement EFS StorageClass `efs-sc`. This component is new and you may need to add it to your
-  cluster.
+   [eks/storage-class](https://github.com/cloudposse/terraform-aws-components/tree/main/modules/eks/storage-class)
+   module to create a replacement EFS StorageClass `efs-sc`. This component is new and you may need to add it to your
+   cluster.
 4. Deploy the EFS CSI Driver Add-On by adding `aws-efs-csi-driver` to the `addons` map (see `README`).
 5. Restore the Deployments you modified in step 1.
 

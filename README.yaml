@@ -262,6 +262,215 @@ usage: |-
           deploy_addons_to_fargate: false
   ```
 
+  ### EKS Auto Mode
+
+  [EKS Auto Mode](https://docs.aws.amazon.com/eks/latest/userguide/automode.html) (GA December 2024) delegates
+  compute, networking, and storage management to AWS. When enabled, AWS manages:
+
+  - **Compute** -- Node provisioning via managed Karpenter (replaces self-managed Karpenter and managed node groups)
+  - **Networking** -- Elastic load balancing for Services and Ingress (replaces self-managed ALB controller)
+  - **Storage** -- EBS block storage via `ebs.csi.eks.amazonaws.com` provisioner (replaces self-managed EBS CSI driver)
+
+  Auto Mode also manages the `vpc-cni`, `kube-proxy`, `coredns`, and `aws-ebs-csi-driver` add-ons automatically.
+
+  #### Greenfield (new cluster) with Auto Mode
+
+  Create a mixin at `catalog/eks/cluster/mixins/auto-mode.yaml`:
+
+  ```yaml
+  components:
+    terraform:
+      eks/cluster:
+        vars:
+          # Enable EKS Auto Mode
+          auto_mode_enabled: true
+          auto_mode_node_pools:
+            - general-purpose
+            - system
+
+          # Disable self-managed compute -- Auto Mode handles it
+          managed_node_groups_enabled: false
+          node_groups: {}
+          karpenter_iam_role_enabled: false
+          fargate_profiles: {}
+
+          # Remove addons managed by Auto Mode.
+          # Only aws-efs-csi-driver remains (not managed by Auto Mode).
+          addons:
+            aws-efs-csi-driver:
+              addon_version: null # use latest compatible
+
+          addons_depends_on: false
+  ```
+
+  Import it in your stack configuration after your Kubernetes version mixin:
+
+  ```yaml
+  import:
+    - catalog/eks/cluster/mixins/k8s-1-31
+    - catalog/eks/cluster/mixins/auto-mode
+  ```
+
+  When using Auto Mode, do **not** deploy the following components:
+  - `eks/karpenter` -- Auto Mode includes managed Karpenter
+  - `eks/alb-controller` -- Auto Mode includes elastic load balancing
+  - `eks/karpenter-node-pool` -- Use Auto Mode's built-in `general-purpose` and `system` node pools
+    (custom NodePools can still be created, but use the `eks.amazonaws.com/v1` NodeClass API)
+
+  #### Cluster version upgrades with Auto Mode
+
+  Auto Mode significantly simplifies Kubernetes version upgrades:
+
+  1. **Bump `cluster_kubernetes_version`** in your version mixin (e.g., `"1.31"` to `"1.32"`)
+  2. **Apply** -- the control plane upgrades in place (~10-15 minutes)
+  3. **Nodes auto-update** -- Auto Mode's managed Karpenter detects version drift and automatically
+     replaces nodes with the new kubelet version. No manual intervention required.
+  4. **Add-ons auto-update** -- `vpc-cni`, `kube-proxy`, `coredns`, and `aws-ebs-csi-driver` are
+     automatically upgraded to compatible versions as part of the control plane upgrade.
+  5. **Non-Auto-Mode add-ons** (e.g., `aws-efs-csi-driver`) still need manual version bumps.
+
+  Ensure workloads have [PodDisruptionBudgets](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)
+  for graceful node replacement during the rolling update.
+
+  For brownfield migration from an existing cluster, see [UPGRADING.md](./UPGRADING.md).
+
+  #### Important Auto Mode limitations
+
+  - **Bottlerocket only** -- Auto Mode nodes run Bottlerocket. Custom AMIs (AL2, Ubuntu, Windows) are not supported.
+  - **No SSH/IMDS** -- Auto Mode nodes are immutable with no SSH or instance metadata access.
+  - **21-day max node lifetime** -- Nodes are automatically replaced within 21 days. Workloads must tolerate rotation.
+  - **EBS provisioner change** -- Auto Mode uses `ebs.csi.eks.amazonaws.com` (not `ebs.csi.aws.com`).
+    PVCs created by one provisioner cannot mount on nodes managed by the other.
+  - **CoreDNS runs as a systemd service** -- Custom CoreDNS ConfigMaps will not work on Auto Mode nodes.
+
+  ### EKS Capabilities
+
+  [EKS Capabilities](https://docs.aws.amazon.com/eks/latest/userguide/capabilities.html) allow you to enable
+  AWS-managed operational software directly on your cluster. Supported capability types:
+
+  - **ARGOCD** -- Managed Argo CD for GitOps continuous delivery
+  - **ACK** -- AWS Controllers for Kubernetes, enabling management of AWS resources via Kubernetes custom resources
+  - **KRO** -- Kube Resource Orchestrator for composing Kubernetes resources
+
+  Each capability requires an IAM role. You can either provide your own via `role_arn` or let the component
+  create one automatically. Auto-created roles use a trust policy for `capabilities.eks.amazonaws.com` and
+  can have additional IAM policies attached via `iam_policy_arns`.
+
+  #### Argo CD capability
+
+  > [!NOTE]
+  >
+  > The managed Argo CD capability requires [aws-sso](https://docs.aws.amazon.com/singlesignon/latest/userguide/what-is.html)
+  > (IAM Identity Center) v3.0.2 or later for RBAC role mapping and the `group_map` output used in the
+  > Atmos `!terraform.state` example below.
+
+  ```yaml
+  components:
+    terraform:
+      eks/cluster:
+        vars:
+          capabilities:
+            argocd:
+              type: ARGOCD
+              configuration:
+                argo_cd:
+                  namespace: argocd
+                  aws_idc:
+                    idc_instance_arn: "arn:aws:sso:::instance/ssoins-1234567890abcdef"
+                    # idc_region: null  # defaults to cluster region
+                  rbac_role_mapping:
+                    - role: ADMIN
+                      identity:
+                        - id: "12345678-1234-1234-1234-123456789012" # SSO group ID
+                          type: SSO_GROUP
+                    - role: VIEWER
+                      identity:
+                        - id: "87654321-4321-4321-4321-210987654321"
+                          type: SSO_GROUP
+  ```
+
+  When using [Atmos](https://atmos.tools), you can use `!terraform.state` lookups to resolve the SSO
+  instance ARN and group IDs dynamically from the `aws-sso` component outputs instead of hardcoding them:
+
+  ```yaml
+  components:
+    terraform:
+      eks/cluster:
+        vars:
+          capabilities:
+            argocd:
+              type: ARGOCD
+              configuration:
+                argo_cd:
+                  namespace: argocd
+                  aws_idc:
+                    idc_instance_arn: !terraform.state aws-sso core-gbl-root ssoadmin_instance_arn
+                  rbac_role_mapping:
+                    - role: ADMIN
+                      identity:
+                        - id: !terraform.state aws-sso core-gbl-root group_map["Managers"]
+                          type: SSO_GROUP
+  ```
+
+  #### ACK capability
+
+  ```yaml
+  components:
+    terraform:
+      eks/cluster:
+        vars:
+          capabilities:
+            ack-s3:
+              type: ACK
+              iam_policy_arns:
+                - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+  ```
+
+  #### KRO capability
+
+  ```yaml
+  components:
+    terraform:
+      eks/cluster:
+        vars:
+          capabilities:
+            kro:
+              type: KRO
+  ```
+
+  #### Combining multiple capabilities
+
+  Multiple capabilities can be enabled simultaneously:
+
+  ```yaml
+  components:
+    terraform:
+      eks/cluster:
+        vars:
+          capabilities:
+            argocd:
+              type: ARGOCD
+              configuration:
+                argo_cd:
+                  namespace: argocd
+                  aws_idc:
+                    idc_instance_arn: "arn:aws:sso:::instance/ssoins-1234567890abcdef"
+                  rbac_role_mapping:
+                    - role: ADMIN
+                      identity:
+                        - id: "12345678-1234-1234-1234-123456789012"
+                          type: SSO_GROUP
+            ack-s3:
+              type: ACK
+              iam_policy_arns:
+                - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+            kro:
+              type: KRO
+  ```
+
+  The component outputs `capabilities` (map of enabled capabilities with ARNs and types) and
+  `capability_role_arns` (map of auto-created IAM role ARNs) for use by downstream components.
+
   ### Amazon EKS End-of-Life Dates
 
   When picking a Kubernetes version, be sure to review the

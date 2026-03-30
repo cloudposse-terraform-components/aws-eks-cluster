@@ -5,7 +5,16 @@ locals {
   eks_cluster_oidc_issuer_url = local.enabled ? replace(module.eks_cluster.eks_cluster_identity_oidc_issuer, "https://", "") : ""
   eks_cluster_id              = local.enabled ? module.eks_cluster.eks_cluster_id : ""
 
-  addon_names                = [for k, v in var.addons : k if v.enabled]
+  # Addons managed by Auto Mode -- these should not be specified when Auto Mode is enabled
+  auto_mode_managed_addon_names = toset(["vpc-cni", "kube-proxy", "coredns", "aws-ebs-csi-driver"])
+
+  # When auto_mode_upgrade is true, filter out Auto Mode managed addons to smooth brownfield migration.
+  # Otherwise, use addons as-is (the check block below will error if conflicts exist).
+  effective_addons_map = local.auto_mode_enabled && var.auto_mode_upgrade ? {
+    for k, v in var.addons : k => v if !contains(local.auto_mode_managed_addon_names, k)
+  } : var.addons
+
+  addon_names                = [for k, v in local.effective_addons_map : k if v.enabled]
   vpc_cni_addon_enabled      = local.enabled && contains(local.addon_names, "vpc-cni")
   aws_ebs_csi_driver_enabled = local.enabled && contains(local.addon_names, "aws-ebs-csi-driver")
   aws_efs_csi_driver_enabled = local.enabled && contains(local.addon_names, "aws-efs-csi-driver")
@@ -14,9 +23,9 @@ locals {
   # The `vpc-cni`, `aws-ebs-csi-driver`, and `aws-efs-csi-driver` addons are special as they always require an
   # IAM role for Kubernetes Service Account (IRSA). The roles are created by this component unless ARNs are provided.
   # Use "?" operator to avoid evaluating map lookup when entry is missing
-  vpc_cni_sa_needed = local.vpc_cni_addon_enabled ? lookup(var.addons["vpc-cni"], "service_account_role_arn", null) == null : false
-  ebs_csi_sa_needed = local.aws_ebs_csi_driver_enabled ? lookup(var.addons["aws-ebs-csi-driver"], "service_account_role_arn", null) == null : false
-  efs_csi_sa_needed = local.aws_efs_csi_driver_enabled ? lookup(var.addons["aws-efs-csi-driver"], "service_account_role_arn", null) == null : false
+  vpc_cni_sa_needed = local.vpc_cni_addon_enabled ? lookup(local.effective_addons_map["vpc-cni"], "service_account_role_arn", null) == null : false
+  ebs_csi_sa_needed = local.aws_ebs_csi_driver_enabled ? lookup(local.effective_addons_map["aws-ebs-csi-driver"], "service_account_role_arn", null) == null : false
+  efs_csi_sa_needed = local.aws_efs_csi_driver_enabled ? lookup(local.effective_addons_map["aws-efs-csi-driver"], "service_account_role_arn", null) == null : false
   addon_service_account_role_arn_map = {
     vpc-cni            = module.vpc_cni_eks_iam_role.service_account_role_arn
     aws-ebs-csi-driver = module.aws_ebs_csi_driver_eks_iam_role.service_account_role_arn
@@ -26,7 +35,7 @@ locals {
   final_addon_service_account_role_arn_map = merge(local.addon_service_account_role_arn_map, local.overridable_additional_addon_service_account_role_arn_map)
 
   addons = [
-    for k, v in var.addons : {
+    for k, v in local.effective_addons_map : {
       addon_name                  = k
       addon_version               = lookup(v, "addon_version", null)
       configuration_values        = lookup(v, "configuration_values", null)
@@ -39,6 +48,9 @@ locals {
 
     } if v.enabled
   ]
+
+  # Alias used by main.tf to pass to the module
+  effective_addons = local.addons
 
   addons_depends_on = concat([
     module.vpc_cni_eks_iam_role,
@@ -69,6 +81,20 @@ locals {
     #    } : {}),
     local.overridable_additional_addon_fargate_profiles
   )
+}
+
+# When Auto Mode is enabled and auto_mode_upgrade is false (default), error if
+# Auto Mode-managed addons are still present in the addons map. This enforces
+# a clean configuration for greenfield deployments and post-migration steady state.
+# Set auto_mode_upgrade = true to silently filter them out during brownfield migration.
+check "auto_mode_addon_conflict" {
+  assert {
+    condition = !local.auto_mode_enabled || var.auto_mode_upgrade || length(setintersection(
+      local.auto_mode_managed_addon_names,
+      toset([for k, v in var.addons : k if v.enabled])
+    )) == 0
+    error_message = "When auto_mode_enabled is true, remove these addons from the addons variable (they are managed by Auto Mode): vpc-cni, kube-proxy, coredns, aws-ebs-csi-driver. Set auto_mode_upgrade = true to filter them automatically during brownfield migration."
+  }
 }
 
 # `vpc-cni` EKS addon

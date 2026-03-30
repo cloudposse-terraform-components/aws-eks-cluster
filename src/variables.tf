@@ -484,6 +484,102 @@ variable "karpenter_ecr_public_resources" {
   nullable    = false
 }
 
+variable "auto_mode_enabled" {
+  type        = bool
+  description = <<-EOT
+    Enable EKS Auto Mode. When enabled, AWS manages compute (via managed Karpenter),
+    networking (elastic load balancing), and storage (EBS block storage) for the cluster.
+    Requires Kubernetes 1.29+ and AWS provider >= 5.79.0.
+    Cannot be used with `karpenter_iam_role_enabled = true` (Auto Mode includes managed Karpenter).
+    When enabled, the addons `vpc-cni`, `kube-proxy`, `coredns`, and `aws-ebs-csi-driver` are
+    managed by Auto Mode and should be removed from the `addons` variable (or use `auto_mode_upgrade`
+    for brownfield migration).
+    EOT
+  default     = false
+  nullable    = false
+}
+
+variable "auto_mode_node_pools" {
+  type        = list(string)
+  description = <<-EOT
+    Built-in node pools for EKS Auto Mode. Valid values are "general-purpose" and "system".
+    Only used when `auto_mode_enabled` is true.
+    EOT
+  default     = ["general-purpose", "system"]
+  nullable    = false
+
+  validation {
+    condition     = alltrue([for pool in var.auto_mode_node_pools : contains(["general-purpose", "system"], pool)])
+    error_message = "Valid values for auto_mode_node_pools are 'general-purpose' and 'system'."
+  }
+}
+
+variable "auto_mode_node_role_arn" {
+  type        = string
+  description = <<-EOT
+    ARN of an existing IAM role for Auto Mode nodes. If not provided and `auto_mode_enabled`
+    is true, a role will be created automatically with `AmazonEKSWorkerNodeMinimalPolicy`
+    and `AmazonEC2ContainerRegistryPullOnly` policies.
+    EOT
+  default     = null
+}
+
+variable "auto_mode_upgrade" {
+  type        = bool
+  description = <<-EOT
+    Brownfield migration flag for Auto Mode. When `true` and `auto_mode_enabled` is `true`,
+    the addons managed by Auto Mode (`vpc-cni`, `kube-proxy`, `coredns`, `aws-ebs-csi-driver`)
+    are silently filtered from the addons map so they are removed in the same apply that enables
+    Auto Mode. When `false` (default), an error is raised if those addons are still present,
+    enforcing a clean configuration for greenfield deployments and post-migration steady state.
+    EOT
+  default     = false
+  nullable    = false
+}
+
+variable "capabilities" {
+  type = map(object({
+    enabled                   = optional(bool, true)
+    type                      = string # ACK, ARGOCD, KRO
+    role_arn                  = optional(string, null)
+    iam_policy_arns           = optional(list(string), [])
+    delete_propagation_policy = optional(string, "RETAIN")
+    configuration = optional(object({
+      argo_cd = optional(object({
+        namespace = optional(string, "argocd")
+        aws_idc = optional(object({
+          idc_instance_arn = string
+          idc_region       = optional(string, null)
+        }), null)
+        network_access = optional(object({
+          vpce_ids = optional(list(string), [])
+        }), null)
+        rbac_role_mapping = optional(list(object({
+          role = string # ADMIN, EDITOR, VIEWER
+          identity = list(object({
+            id   = string
+            type = string # SSO_USER, SSO_GROUP
+          }))
+        })), [])
+      }), null)
+    }), null)
+    create_timeout = optional(string, null)
+    update_timeout = optional(string, null)
+    delete_timeout = optional(string, null)
+  }))
+
+  description = <<-EOT
+    Map of EKS Capabilities to enable on the cluster. Each key is the capability
+    name (must be unique within the cluster). Supported types: ACK, ARGOCD, KRO.
+
+    When `role_arn` is null, an IAM role is automatically created with a trust
+    policy for `capabilities.eks.amazonaws.com`. Use `iam_policy_arns` to attach
+    additional IAM policies to the auto-created role (e.g., ACK service permissions).
+    EOT
+  default     = {}
+  nullable    = false
+}
+
 variable "fargate_profiles" {
   type = map(object({
     kubernetes_namespace = string

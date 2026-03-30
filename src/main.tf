@@ -56,6 +56,8 @@ locals {
     # probably has other deficiencies that would prevent it from working with Windows nodes,
     # so we will stick with just saying Windows is not supported until we have some need for it.
     local.karpenter_iam_role_enabled ? [local.karpenter_role_arn] : [],
+    # Auto Mode node role access entry is automatically created by EKS when Auto Mode is enabled,
+    # so we do not need to add it here. Adding it would cause a 409 ResourceInUseException.
   ) : []
 
   # For backwards compatibility, we need to add the unmanaged worker role ARNs, but
@@ -151,7 +153,7 @@ module "utils" {
 
 module "eks_cluster" {
   source  = "cloudposse/eks-cluster/aws"
-  version = "4.8.0"
+  version = "4.9.0"
 
   region     = var.region
   attributes = local.attributes
@@ -173,9 +175,28 @@ module "eks_cluster" {
   public_access_cidrs          = var.public_access_cidrs
   subnet_ids                   = var.cluster_private_subnets_only ? local.private_subnet_ids : concat(local.private_subnet_ids, local.public_subnet_ids)
 
+  # EKS Auto Mode
+  auto_mode_compute_config = {
+    enabled       = var.auto_mode_enabled
+    node_pools    = var.auto_mode_node_pools
+    node_role_arn = local.auto_mode_node_role_arn
+  }
+
+  auto_mode_storage_config = {
+    block_storage = {
+      enabled = var.auto_mode_enabled
+    }
+  }
+
+  auto_mode_elastic_load_balancing = {
+    enabled = var.auto_mode_enabled
+  }
+
+  # EKS Capabilities (Argo CD, ACK, KRO)
+  capabilities = local.module_capabilities
 
   # EKS addons
-  addons = local.addons
+  addons = local.effective_addons
 
   addons_depends_on = var.addons_depends_on ? concat(
     [module.region_node_group], local.addons_depends_on,
