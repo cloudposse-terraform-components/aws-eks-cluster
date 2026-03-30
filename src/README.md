@@ -694,7 +694,7 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.9.0, < 6.0.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.25.0 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.0 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.7.1, != 1.4.0, < 3.0.0 |
 
@@ -702,18 +702,20 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.9.0, < 6.0.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.25.0 |
 | <a name="provider_random"></a> [random](#provider\_random) | >= 3.0 |
 
 ## Modules
 
 | Name | Source | Version |
 |------|--------|---------|
+| <a name="module_auto_mode_node_label"></a> [auto\_mode\_node\_label](#module\_auto\_mode\_node\_label) | cloudposse/label/null | 0.25.0 |
 | <a name="module_aws_ebs_csi_driver_eks_iam_role"></a> [aws\_ebs\_csi\_driver\_eks\_iam\_role](#module\_aws\_ebs\_csi\_driver\_eks\_iam\_role) | cloudposse/eks-iam-role/aws | 2.2.1 |
 | <a name="module_aws_ebs_csi_driver_fargate_profile"></a> [aws\_ebs\_csi\_driver\_fargate\_profile](#module\_aws\_ebs\_csi\_driver\_fargate\_profile) | cloudposse/eks-fargate-profile/aws | 1.3.1 |
 | <a name="module_aws_efs_csi_driver_eks_iam_role"></a> [aws\_efs\_csi\_driver\_eks\_iam\_role](#module\_aws\_efs\_csi\_driver\_eks\_iam\_role) | cloudposse/eks-iam-role/aws | 2.2.1 |
+| <a name="module_capability_label"></a> [capability\_label](#module\_capability\_label) | cloudposse/label/null | 0.25.0 |
 | <a name="module_coredns_fargate_profile"></a> [coredns\_fargate\_profile](#module\_coredns\_fargate\_profile) | cloudposse/eks-fargate-profile/aws | 1.3.1 |
-| <a name="module_eks_cluster"></a> [eks\_cluster](#module\_eks\_cluster) | cloudposse/eks-cluster/aws | 4.8.0 |
+| <a name="module_eks_cluster"></a> [eks\_cluster](#module\_eks\_cluster) | cloudposse/eks-cluster/aws | 4.9.0 |
 | <a name="module_fargate_pod_execution_role"></a> [fargate\_pod\_execution\_role](#module\_fargate\_pod\_execution\_role) | cloudposse/eks-fargate-profile/aws | 1.3.1 |
 | <a name="module_fargate_profile"></a> [fargate\_profile](#module\_fargate\_profile) | cloudposse/eks-fargate-profile/aws | 1.3.1 |
 | <a name="module_iam_arns"></a> [iam\_arns](#module\_iam\_arns) | ../../account-map/modules/roles-to-principals | n/a |
@@ -733,22 +735,30 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 | [aws_iam_instance_profile.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile) | resource |
 | [aws_iam_policy.ecr_public_readonly](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [aws_iam_policy.ipv6_eks_cni_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
+| [aws_iam_role.auto_mode_node](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role.capability](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role.karpenter](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role_policy_attachment.amazon_ec2_container_registry_readonly](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.amazon_eks_worker_node_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.amazon_ssm_managed_instance_core](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.auto_mode_node_ecr](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.auto_mode_node_minimal](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.aws_ebs_csi_driver](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.aws_efs_csi_driver](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.capability](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.ecr_public_readonly](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.ipv6_eks_cni_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.vpc_cni](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [random_pet.camel_case_warning](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/pet) | resource |
 | [aws_availability_zones.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
 | [aws_iam_policy_document.assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.auto_mode_node_assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
+| [aws_iam_policy_document.capability_assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.ecr_public_readonly](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.ipv6_eks_cni_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.vpc_cni_ipv6](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_roles.sso_roles](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_roles) | data source |
+| [aws_partition.auto_mode](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
 | [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
 
 ## Inputs
@@ -763,12 +773,17 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 | <a name="input_allowed_cidr_blocks"></a> [allowed\_cidr\_blocks](#input\_allowed\_cidr\_blocks) | List of CIDR blocks to be allowed to connect to the EKS cluster | `list(string)` | `[]` | no |
 | <a name="input_allowed_security_groups"></a> [allowed\_security\_groups](#input\_allowed\_security\_groups) | List of Security Group IDs to be allowed to connect to the EKS cluster | `list(string)` | `[]` | no |
 | <a name="input_attributes"></a> [attributes](#input\_attributes) | ID element. Additional attributes (e.g. `workers` or `cluster`) to add to `id`,<br/>in the order they appear in the list. New attributes are appended to the<br/>end of the list. The elements of the list are joined by the `delimiter`<br/>and treated as a single ID element. | `list(string)` | `[]` | no |
+| <a name="input_auto_mode_enabled"></a> [auto\_mode\_enabled](#input\_auto\_mode\_enabled) | Enable EKS Auto Mode. When enabled, AWS manages compute (via managed Karpenter),<br/>networking (elastic load balancing), and storage (EBS block storage) for the cluster.<br/>Requires Kubernetes 1.29+ and AWS provider >= 5.79.0.<br/>Cannot be used with `karpenter_iam_role_enabled = true` (Auto Mode includes managed Karpenter).<br/>When enabled, the addons `vpc-cni`, `kube-proxy`, `coredns`, and `aws-ebs-csi-driver` are<br/>managed by Auto Mode and should be removed from the `addons` variable (or use `auto_mode_upgrade`<br/>for brownfield migration). | `bool` | `false` | no |
+| <a name="input_auto_mode_node_pools"></a> [auto\_mode\_node\_pools](#input\_auto\_mode\_node\_pools) | Built-in node pools for EKS Auto Mode. Valid values are "general-purpose" and "system".<br/>Only used when `auto_mode_enabled` is true. | `list(string)` | <pre>[<br/>  "general-purpose",<br/>  "system"<br/>]</pre> | no |
+| <a name="input_auto_mode_node_role_arn"></a> [auto\_mode\_node\_role\_arn](#input\_auto\_mode\_node\_role\_arn) | ARN of an existing IAM role for Auto Mode nodes. If not provided and `auto_mode_enabled`<br/>is true, a role will be created automatically with `AmazonEKSWorkerNodeMinimalPolicy`<br/>and `AmazonEC2ContainerRegistryPullOnly` policies. | `string` | `null` | no |
+| <a name="input_auto_mode_upgrade"></a> [auto\_mode\_upgrade](#input\_auto\_mode\_upgrade) | Brownfield migration flag for Auto Mode. When `true` and `auto_mode_enabled` is `true`,<br/>the addons managed by Auto Mode (`vpc-cni`, `kube-proxy`, `coredns`, `aws-ebs-csi-driver`)<br/>are silently filtered from the addons map so they are removed in the same apply that enables<br/>Auto Mode. When `false` (default), an error is raised if those addons are still present,<br/>enforcing a clean configuration for greenfield deployments and post-migration steady state. | `bool` | `false` | no |
 | <a name="input_availability_zone_abbreviation_type"></a> [availability\_zone\_abbreviation\_type](#input\_availability\_zone\_abbreviation\_type) | Type of Availability Zone abbreviation (either `fixed` or `short`) to use in names. See https://github.com/cloudposse/terraform-aws-utils for details. | `string` | `"fixed"` | no |
 | <a name="input_availability_zone_ids"></a> [availability\_zone\_ids](#input\_availability\_zone\_ids) | List of Availability Zones IDs where subnets will be created. Overrides `availability_zones`.<br/>Can be the full name, e.g. `use1-az1`, or just the part after the AZ ID region code, e.g. `-az1`,<br/>to allow reusable values across regions. Consider contention for resources and spot pricing in each AZ when selecting.<br/>Useful in some regions when using only some AZs and you want to use the same ones across multiple accounts. | `list(string)` | `[]` | no |
 | <a name="input_availability_zones"></a> [availability\_zones](#input\_availability\_zones) | AWS Availability Zones in which to deploy multi-AZ resources.<br/>Ignored if `availability_zone_ids` is set.<br/>Can be the full name, e.g. `us-east-1a`, or just the part after the region, e.g. `a` to allow reusable values across regions.<br/>If not provided, resources will be provisioned in every zone with a private subnet in the VPC. | `list(string)` | `[]` | no |
 | <a name="input_aws_ssm_agent_enabled"></a> [aws\_ssm\_agent\_enabled](#input\_aws\_ssm\_agent\_enabled) | Set true to attach the required IAM policy for AWS SSM agent to each EC2 instance's IAM Role | `bool` | `false` | no |
 | <a name="input_aws_sso_permission_sets_rbac"></a> [aws\_sso\_permission\_sets\_rbac](#input\_aws\_sso\_permission\_sets\_rbac) | (Not Recommended): AWS SSO (IAM Identity Center) permission sets in the EKS deployment account to add to `aws-auth` ConfigMap.<br/>Unfortunately, `aws-auth` ConfigMap does not support SSO permission sets, so we map the generated<br/>IAM Role ARN corresponding to the permission set at the time Terraform runs. This is subject to change<br/>when any changes are made to the AWS SSO configuration, invalidating the mapping, and requiring a<br/>`terraform apply` in this project to update the `aws-auth` ConfigMap and restore access. | <pre>list(object({<br/>    aws_sso_permission_set = string<br/>    groups                 = list(string)<br/>  }))</pre> | `[]` | no |
 | <a name="input_aws_team_roles_rbac"></a> [aws\_team\_roles\_rbac](#input\_aws\_team\_roles\_rbac) | List of `aws-team-roles` (in the target AWS account) to map to Kubernetes RBAC groups. | <pre>list(object({<br/>    aws_team_role = string<br/>    groups        = list(string)<br/>  }))</pre> | `[]` | no |
+| <a name="input_capabilities"></a> [capabilities](#input\_capabilities) | Map of EKS Capabilities to enable on the cluster. Each key is the capability<br/>name (must be unique within the cluster). Supported types: ACK, ARGOCD, KRO.<br/><br/>When `role_arn` is null, an IAM role is automatically created with a trust<br/>policy for `capabilities.eks.amazonaws.com`. Use `iam_policy_arns` to attach<br/>additional IAM policies to the auto-created role (e.g., ACK service permissions). | <pre>map(object({<br/>    enabled                   = optional(bool, true)<br/>    type                      = string # ACK, ARGOCD, KRO<br/>    role_arn                  = optional(string, null)<br/>    iam_policy_arns           = optional(list(string), [])<br/>    delete_propagation_policy = optional(string, "RETAIN")<br/>    configuration = optional(object({<br/>      argo_cd = optional(object({<br/>        namespace = optional(string, "argocd")<br/>        aws_idc = optional(object({<br/>          idc_instance_arn = string<br/>          idc_region       = optional(string, null)<br/>        }), null)<br/>        network_access = optional(object({<br/>          vpce_ids = optional(list(string), [])<br/>        }), null)<br/>        rbac_role_mapping = optional(list(object({<br/>          role = string # ADMIN, EDITOR, VIEWER<br/>          identity = list(object({<br/>            id   = string<br/>            type = string # SSO_USER, SSO_GROUP<br/>          }))<br/>        })), [])<br/>      }), null)<br/>    }), null)<br/>    create_timeout = optional(string, null)<br/>    update_timeout = optional(string, null)<br/>    delete_timeout = optional(string, null)<br/>  }))</pre> | `{}` | no |
 | <a name="input_cluster_encryption_config_enabled"></a> [cluster\_encryption\_config\_enabled](#input\_cluster\_encryption\_config\_enabled) | Set to `true` to enable Cluster Encryption Configuration | `bool` | `true` | no |
 | <a name="input_cluster_encryption_config_kms_key_deletion_window_in_days"></a> [cluster\_encryption\_config\_kms\_key\_deletion\_window\_in\_days](#input\_cluster\_encryption\_config\_kms\_key\_deletion\_window\_in\_days) | Cluster Encryption Config KMS Key Resource argument - key deletion windows in days post destruction | `number` | `10` | no |
 | <a name="input_cluster_encryption_config_kms_key_enable_key_rotation"></a> [cluster\_encryption\_config\_kms\_key\_enable\_key\_rotation](#input\_cluster\_encryption\_config\_kms\_key\_enable\_key\_rotation) | Cluster Encryption Config KMS Key Resource argument - enable kms key rotation | `bool` | `true` | no |
@@ -823,7 +838,12 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 
 | Name | Description |
 |------|-------------|
+| <a name="output_auto_mode_enabled"></a> [auto\_mode\_enabled](#output\_auto\_mode\_enabled) | Whether EKS Auto Mode is enabled on the cluster |
+| <a name="output_auto_mode_node_role_arn"></a> [auto\_mode\_node\_role\_arn](#output\_auto\_mode\_node\_role\_arn) | ARN of the IAM role used by Auto Mode nodes |
+| <a name="output_auto_mode_node_role_name"></a> [auto\_mode\_node\_role\_name](#output\_auto\_mode\_node\_role\_name) | Name of the IAM role used by Auto Mode nodes |
 | <a name="output_availability_zones"></a> [availability\_zones](#output\_availability\_zones) | Availability Zones in which the cluster is provisioned |
+| <a name="output_capabilities"></a> [capabilities](#output\_capabilities) | Map of enabled EKS Capabilities with their ARNs and types |
+| <a name="output_capability_role_arns"></a> [capability\_role\_arns](#output\_capability\_role\_arns) | Map of capability IAM role ARNs (auto-created by this component) |
 | <a name="output_eks_addons_versions"></a> [eks\_addons\_versions](#output\_eks\_addons\_versions) | Map of enabled EKS Addons names and versions |
 | <a name="output_eks_auth_worker_roles"></a> [eks\_auth\_worker\_roles](#output\_eks\_auth\_worker\_roles) | List of worker IAM roles that were included in the `auth-map` ConfigMap. |
 | <a name="output_eks_cluster_arn"></a> [eks\_cluster\_arn](#output\_eks\_cluster\_arn) | The Amazon Resource Name (ARN) of the cluster |
