@@ -78,6 +78,12 @@ usage: |-
             # https://aws.github.io/aws-eks-best-practices/networking/vpc-cni/#deploy-vpc-cni-managed-add-on
             vpc-cni:
               addon_version: "v1.16.0-eksbuild.1" # set `addon_version` to `null` to use the latest version
+              # Set `preserve: true` to leave the addon's Kubernetes resources (e.g. the
+              # DaemonSet) running when the addon is removed from Terraform management, for
+              # example when handing the workload off to EKS Auto Mode. `preserve` only acts
+              # at destroy time, so apply with `preserve: true` while the addon is still
+              # present, then remove the addon so the destroy honors it.
+              # preserve: true
             # https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
             kube-proxy:
               addon_version: "v1.29.0-eksbuild.1" # set `addon_version` to `null` to use the latest version

@@ -122,6 +122,12 @@ components:
           # https://aws.github.io/aws-eks-best-practices/networking/vpc-cni/#deploy-vpc-cni-managed-add-on
           vpc-cni:
             addon_version: "v1.16.0-eksbuild.1" # set `addon_version` to `null` to use the latest version
+            # Set `preserve: true` to leave the addon's Kubernetes resources (e.g. the
+            # DaemonSet) running when the addon is removed from Terraform management, for
+            # example when handing the workload off to EKS Auto Mode. `preserve` only acts
+            # at destroy time, so apply with `preserve: true` while the addon is still
+            # present, then remove the addon so the destroy honors it.
+            # preserve: true
           # https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html
           kube-proxy:
             addon_version: "v1.29.0-eksbuild.1" # set `addon_version` to `null` to use the latest version
@@ -746,7 +752,7 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.25.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.42.0 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.0 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.7.1, != 1.4.0, < 3.0.0 |
 
@@ -754,7 +760,7 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.25.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.42.0 |
 | <a name="provider_random"></a> [random](#provider\_random) | >= 3.0 |
 
 ## Modules
@@ -767,7 +773,7 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 | <a name="module_aws_efs_csi_driver_eks_iam_role"></a> [aws\_efs\_csi\_driver\_eks\_iam\_role](#module\_aws\_efs\_csi\_driver\_eks\_iam\_role) | cloudposse/eks-iam-role/aws | 2.2.1 |
 | <a name="module_capability_label"></a> [capability\_label](#module\_capability\_label) | cloudposse/label/null | 0.25.0 |
 | <a name="module_coredns_fargate_profile"></a> [coredns\_fargate\_profile](#module\_coredns\_fargate\_profile) | cloudposse/eks-fargate-profile/aws | 1.3.1 |
-| <a name="module_eks_cluster"></a> [eks\_cluster](#module\_eks\_cluster) | cloudposse/eks-cluster/aws | 4.9.0 |
+| <a name="module_eks_cluster"></a> [eks\_cluster](#module\_eks\_cluster) | cloudposse/eks-cluster/aws | 4.11.0 |
 | <a name="module_fargate_pod_execution_role"></a> [fargate\_pod\_execution\_role](#module\_fargate\_pod\_execution\_role) | cloudposse/eks-fargate-profile/aws | 1.3.1 |
 | <a name="module_fargate_profile"></a> [fargate\_profile](#module\_fargate\_profile) | cloudposse/eks-fargate-profile/aws | 1.3.1 |
 | <a name="module_iam_arns"></a> [iam\_arns](#module\_iam\_arns) | ../../account-map/modules/roles-to-principals | n/a |
@@ -819,7 +825,7 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 |------|-------------|------|---------|:--------:|
 | <a name="input_access_config"></a> [access\_config](#input\_access\_config) | Access configuration for the EKS cluster | <pre>object({<br/>    authentication_mode                         = optional(string, "API")<br/>    bootstrap_cluster_creator_admin_permissions = optional(bool, false)<br/>  })</pre> | `{}` | no |
 | <a name="input_additional_tag_map"></a> [additional\_tag\_map](#input\_additional\_tag\_map) | Additional key-value pairs to add to each map in `tags_as_list_of_maps`. Not added to `tags` or `id`.<br/>This is for some rare cases where resources want additional configuration of tags<br/>and therefore take a list of maps with tag key, value, and additional configuration. | `map(string)` | `{}` | no |
-| <a name="input_addons"></a> [addons](#input\_addons) | Manages [EKS addons](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eks_addon) resources | <pre>map(object({<br/>    enabled       = optional(bool, true)<br/>    addon_version = optional(string, null)<br/>    # configuration_values is a JSON string, such as '{"computeType": "Fargate"}'.<br/>    configuration_values = optional(string, null)<br/>    # Set default resolve_conflicts to OVERWRITE because it is required on initial installation of<br/>    # add-ons that have self-managed versions installed by default (e.g. vpc-cni, coredns), and<br/>    # because any custom configuration that you would want to preserve should be managed by Terraform.<br/>    resolve_conflicts_on_create = optional(string, "OVERWRITE")<br/>    resolve_conflicts_on_update = optional(string, "OVERWRITE")<br/>    service_account_role_arn    = optional(string, null)<br/>    create_timeout              = optional(string, null)<br/>    update_timeout              = optional(string, null)<br/>    delete_timeout              = optional(string, null)<br/>  }))</pre> | `{}` | no |
+| <a name="input_addons"></a> [addons](#input\_addons) | Manages [EKS addons](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eks_addon) resources | <pre>map(object({<br/>    enabled       = optional(bool, true)<br/>    addon_version = optional(string, null)<br/>    # configuration_values is a JSON string, such as '{"computeType": "Fargate"}'.<br/>    configuration_values = optional(string, null)<br/>    # Set default resolve_conflicts to OVERWRITE because it is required on initial installation of<br/>    # add-ons that have self-managed versions installed by default (e.g. vpc-cni, coredns), and<br/>    # because any custom configuration that you would want to preserve should be managed by Terraform.<br/>    resolve_conflicts_on_create = optional(string, "OVERWRITE")<br/>    resolve_conflicts_on_update = optional(string, "OVERWRITE")<br/>    service_account_role_arn    = optional(string, null)<br/>    create_timeout              = optional(string, null)<br/>    update_timeout              = optional(string, null)<br/>    delete_timeout              = optional(string, null)<br/>    # When `true`, the underlying Kubernetes resources (e.g. the coredns/vpc-cni/kube-proxy<br/>    # DaemonSets and Deployments) are left running when the addon is removed from Terraform<br/>    # management. `preserve` only takes effect at destroy time, so set it `true` and apply<br/>    # while the addon is still present, then remove the addon so the destroy honors it.<br/>    preserve = optional(bool, null)<br/>  }))</pre> | `{}` | no |
 | <a name="input_addons_depends_on"></a> [addons\_depends\_on](#input\_addons\_depends\_on) | If set `true` (recommended), all addons will depend on managed node groups provisioned by this component and therefore not be installed until nodes are provisioned.<br/>See [issue #170](https://github.com/cloudposse/terraform-aws-eks-cluster/issues/170) for more details. | `bool` | `true` | no |
 | <a name="input_allow_ingress_from_vpc_accounts"></a> [allow\_ingress\_from\_vpc\_accounts](#input\_allow\_ingress\_from\_vpc\_accounts) | List of account contexts whose VPC CIDRs should be allowed ingress to the cluster security group.<br/>Each entry identifies an account by tenant/stage/environment and triggers a remote state lookup<br/>to retrieve that account's VPC CIDR.<br/><br/>The optional `vpc_cidr` field bypasses the remote state lookup for that entry when set,<br/>using the provided value directly instead. This allows deployments that do not have<br/>cross-account remote state access to resolve CIDRs ahead of time (e.g. via Atmos<br/>`!terraform.state` functions in stack YAML). Entries without `vpc_cidr` continue using<br/>remote state lookups unchanged, so migration can be done one entry at a time.<br/><br/>e.g.<br/><br/>allow\_ingress\_from\_vpc\_accounts:<br/>  - tenant: core<br/>    stage: auto<br/>    environment: use2<br/>    vpc\_cidr: "10.8.0.0/16"   # optional: bypasses remote state when set<br/>  - tenant: core<br/>    stage: network<br/>    environment: use2 | `any` | `[]` | no |
 | <a name="input_allowed_cidr_blocks"></a> [allowed\_cidr\_blocks](#input\_allowed\_cidr\_blocks) | List of CIDR blocks to be allowed to connect to the EKS cluster | `list(string)` | `[]` | no |

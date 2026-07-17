@@ -619,6 +619,11 @@ variable "addons" {
     create_timeout              = optional(string, null)
     update_timeout              = optional(string, null)
     delete_timeout              = optional(string, null)
+    # When `true`, the underlying Kubernetes resources (e.g. the coredns/vpc-cni/kube-proxy
+    # DaemonSets and Deployments) are left running when the addon is removed from Terraform
+    # management. `preserve` only takes effect at destroy time, so set it `true` and apply
+    # while the addon is still present, then remove the addon so the destroy honors it.
+    preserve = optional(bool, null)
   }))
 
   description = "Manages [EKS addons](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eks_addon) resources"

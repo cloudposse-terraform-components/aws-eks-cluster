@@ -45,6 +45,7 @@ locals {
       create_timeout              = lookup(v, "create_timeout", null)
       update_timeout              = lookup(v, "update_timeout", null)
       delete_timeout              = lookup(v, "delete_timeout", null)
+      preserve                    = lookup(v, "preserve", null)
 
     } if v.enabled
   ]
