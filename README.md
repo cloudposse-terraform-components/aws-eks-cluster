@@ -382,7 +382,31 @@ Auto Mode significantly simplifies Kubernetes version upgrades:
 Ensure workloads have [PodDisruptionBudgets](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)
 for graceful node replacement during the rolling update.
 
-For brownfield migration from an existing cluster, see [UPGRADING.md](./UPGRADING.md).
+#### Brownfield (existing cluster) converting to Auto Mode
+
+Enabling Auto Mode on an existing cluster plans a **cluster replacement** unless you pin
+`bootstrap_self_managed_addons_enabled`. When all three Auto Mode blocks are on, the upstream module
+sets `bootstrap_self_managed_addons` to `false`. That attribute forces replacement when changed, and
+the EKS API never returns it, so an existing cluster holds the provider default `true` in state --
+the change from `true` to `false` is what triggers the replacement.
+
+Set it back to the value already in state so the cluster converts in place:
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        auto_mode_enabled: true
+        # Pin to the value already in state so Auto Mode converts in place
+        # instead of planning a cluster replacement.
+        bootstrap_self_managed_addons_enabled: true
+```
+
+Always check the plan for `# forces replacement` before applying. Leave the variable at its `null`
+default for new clusters -- the upstream module picks the right value.
+
+For the full brownfield migration procedure, see [UPGRADING.md](./UPGRADING.md).
 
 #### Important Auto Mode limitations
 
