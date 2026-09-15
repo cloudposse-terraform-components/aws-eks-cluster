@@ -336,7 +336,31 @@ Auto Mode significantly simplifies Kubernetes version upgrades:
 Ensure workloads have [PodDisruptionBudgets](https://kubernetes.io/docs/tasks/run-application/configure-pdb/)
 for graceful node replacement during the rolling update.
 
-For brownfield migration from an existing cluster, see [UPGRADING.md](./UPGRADING.md).
+#### Brownfield (existing cluster) converting to Auto Mode
+
+Enabling Auto Mode on an existing cluster plans a **cluster replacement** unless you pin
+`bootstrap_self_managed_addons_enabled`. When all three Auto Mode blocks are on, the upstream module
+sets `bootstrap_self_managed_addons` to `false`. That attribute forces replacement when changed, and
+the EKS API never returns it, so an existing cluster holds the provider default `true` in state --
+the change from `true` to `false` is what triggers the replacement.
+
+Set it back to the value already in state so the cluster converts in place:
+
+```yaml
+components:
+  terraform:
+    eks/cluster:
+      vars:
+        auto_mode_enabled: true
+        # Pin to the value already in state so Auto Mode converts in place
+        # instead of planning a cluster replacement.
+        bootstrap_self_managed_addons_enabled: true
+```
+
+Always check the plan for `# forces replacement` before applying. Leave the variable at its `null`
+default for new clusters -- the upstream module picks the right value.
+
+For the full brownfield migration procedure, see [UPGRADING.md](./UPGRADING.md).
 
 #### Important Auto Mode limitations
 
@@ -783,6 +807,7 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 | <a name="input_aws_ssm_agent_enabled"></a> [aws\_ssm\_agent\_enabled](#input\_aws\_ssm\_agent\_enabled) | Set true to attach the required IAM policy for AWS SSM agent to each EC2 instance's IAM Role | `bool` | `false` | no |
 | <a name="input_aws_sso_permission_sets_rbac"></a> [aws\_sso\_permission\_sets\_rbac](#input\_aws\_sso\_permission\_sets\_rbac) | (Not Recommended): AWS SSO (IAM Identity Center) permission sets in the EKS deployment account to add to `aws-auth` ConfigMap.<br/>Unfortunately, `aws-auth` ConfigMap does not support SSO permission sets, so we map the generated<br/>IAM Role ARN corresponding to the permission set at the time Terraform runs. This is subject to change<br/>when any changes are made to the AWS SSO configuration, invalidating the mapping, and requiring a<br/>`terraform apply` in this project to update the `aws-auth` ConfigMap and restore access. | <pre>list(object({<br/>    aws_sso_permission_set = string<br/>    groups                 = list(string)<br/>  }))</pre> | `[]` | no |
 | <a name="input_aws_team_roles_rbac"></a> [aws\_team\_roles\_rbac](#input\_aws\_team\_roles\_rbac) | List of `aws-team-roles` (in the target AWS account) to map to Kubernetes RBAC groups. | <pre>list(object({<br/>    aws_team_role = string<br/>    groups        = list(string)<br/>  }))</pre> | `[]` | no |
+| <a name="input_bootstrap_self_managed_addons_enabled"></a> [bootstrap\_self\_managed\_addons\_enabled](#input\_bootstrap\_self\_managed\_addons\_enabled) | Whether EKS installs the default unmanaged add-ons (`aws-cni`, `kube-proxy`, CoreDNS) at cluster<br/>creation. Leave `null` (the default) to let the upstream module decide: `false` when Auto Mode is<br/>fully enabled, unset otherwise.<br/><br/>Set this to `true` to convert an existing cluster to Auto Mode in place. `bootstrap_self_managed_addons`<br/>forces replacement when changed, and the EKS API never returns it, so an existing cluster holds the<br/>provider default `true` in state. Without this input, enabling Auto Mode on a brownfield cluster plans<br/>a cluster replacement rather than an update. | `bool` | `null` | no |
 | <a name="input_capabilities"></a> [capabilities](#input\_capabilities) | Map of EKS Capabilities to enable on the cluster. Each key is the capability<br/>name (must be unique within the cluster). Supported types: ACK, ARGOCD, KRO.<br/><br/>When `role_arn` is null, an IAM role is automatically created with a trust<br/>policy for `capabilities.eks.amazonaws.com`. Use `iam_policy_arns` to attach<br/>additional IAM policies to the auto-created role (e.g., ACK service permissions). | <pre>map(object({<br/>    enabled                   = optional(bool, true)<br/>    type                      = string # ACK, ARGOCD, KRO<br/>    role_arn                  = optional(string, null)<br/>    iam_policy_arns           = optional(list(string), [])<br/>    delete_propagation_policy = optional(string, "RETAIN")<br/>    configuration = optional(object({<br/>      argo_cd = optional(object({<br/>        namespace = optional(string, "argocd")<br/>        aws_idc = optional(object({<br/>          idc_instance_arn = string<br/>          idc_region       = optional(string, null)<br/>        }), null)<br/>        network_access = optional(object({<br/>          vpce_ids = optional(list(string), [])<br/>        }), null)<br/>        rbac_role_mapping = optional(list(object({<br/>          role = string # ADMIN, EDITOR, VIEWER<br/>          identity = list(object({<br/>            id   = string<br/>            type = string # SSO_USER, SSO_GROUP<br/>          }))<br/>        })), [])<br/>      }), null)<br/>    }), null)<br/>    create_timeout = optional(string, null)<br/>    update_timeout = optional(string, null)<br/>    delete_timeout = optional(string, null)<br/>  }))</pre> | `{}` | no |
 | <a name="input_cluster_encryption_config_enabled"></a> [cluster\_encryption\_config\_enabled](#input\_cluster\_encryption\_config\_enabled) | Set to `true` to enable Cluster Encryption Configuration | `bool` | `true` | no |
 | <a name="input_cluster_encryption_config_kms_key_deletion_window_in_days"></a> [cluster\_encryption\_config\_kms\_key\_deletion\_window\_in\_days](#input\_cluster\_encryption\_config\_kms\_key\_deletion\_window\_in\_days) | Cluster Encryption Config KMS Key Resource argument - key deletion windows in days post destruction | `number` | `10` | no |

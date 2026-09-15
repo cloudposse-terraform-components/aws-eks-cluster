@@ -537,6 +537,21 @@ variable "auto_mode_upgrade" {
   nullable    = false
 }
 
+variable "bootstrap_self_managed_addons_enabled" {
+  type        = bool
+  description = <<-EOT
+    Whether EKS installs the default unmanaged add-ons (`aws-cni`, `kube-proxy`, CoreDNS) at cluster
+    creation. Leave `null` (the default) to let the upstream module decide: `false` when Auto Mode is
+    fully enabled, unset otherwise.
+
+    Set this to `true` to convert an existing cluster to Auto Mode in place. `bootstrap_self_managed_addons`
+    forces replacement when changed, and the EKS API never returns it, so an existing cluster holds the
+    provider default `true` in state. Without this input, enabling Auto Mode on a brownfield cluster plans
+    a cluster replacement rather than an update.
+    EOT
+  default     = null
+}
+
 variable "capabilities" {
   type = map(object({
     enabled                   = optional(bool, true)

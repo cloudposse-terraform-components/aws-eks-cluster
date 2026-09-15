@@ -192,6 +192,8 @@ module "eks_cluster" {
     enabled = var.auto_mode_enabled
   }
 
+  bootstrap_self_managed_addons_enabled = var.bootstrap_self_managed_addons_enabled
+
   # EKS Capabilities (Argo CD, ACK, KRO)
   capabilities = local.module_capabilities
 
