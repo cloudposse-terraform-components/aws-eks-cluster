@@ -774,23 +774,16 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.3.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.42.0 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.0 |
 | <a name="requirement_utils"></a> [utils](#requirement\_utils) | >= 1.7.1, != 1.4.0, < 3.0.0 |
 
-## Providers
-
-| Name | Version |
-|------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.42.0 |
-| <a name="provider_random"></a> [random](#provider\_random) | >= 3.0 |
-
 ## Modules
 
 | Name | Source | Version |
-|------|--------|---------|
+| ---- | ------ | ------- |
 | <a name="module_auto_mode_node_label"></a> [auto\_mode\_node\_label](#module\_auto\_mode\_node\_label) | cloudposse/label/null | 0.25.0 |
 | <a name="module_aws_ebs_csi_driver_eks_iam_role"></a> [aws\_ebs\_csi\_driver\_eks\_iam\_role](#module\_aws\_ebs\_csi\_driver\_eks\_iam\_role) | cloudposse/eks-iam-role/aws | 2.2.1 |
 | <a name="module_aws_ebs_csi_driver_fargate_profile"></a> [aws\_ebs\_csi\_driver\_fargate\_profile](#module\_aws\_ebs\_csi\_driver\_fargate\_profile) | cloudposse/eks-fargate-profile/aws | 1.3.1 |
@@ -806,14 +799,14 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 | <a name="module_region_node_group"></a> [region\_node\_group](#module\_region\_node\_group) | ./modules/node_group_by_region | n/a |
 | <a name="module_this"></a> [this](#module\_this) | cloudposse/label/null | 0.25.0 |
 | <a name="module_utils"></a> [utils](#module\_utils) | cloudposse/utils/aws | 1.4.0 |
-| <a name="module_vpc"></a> [vpc](#module\_vpc) | cloudposse/stack-config/yaml//modules/remote-state | 2.0.0 |
+| <a name="module_vpc"></a> [vpc](#module\_vpc) | cloudposse/stack-config/yaml//modules/remote-state | 2.0.1 |
 | <a name="module_vpc_cni_eks_iam_role"></a> [vpc\_cni\_eks\_iam\_role](#module\_vpc\_cni\_eks\_iam\_role) | cloudposse/eks-iam-role/aws | 2.2.1 |
-| <a name="module_vpc_ingress"></a> [vpc\_ingress](#module\_vpc\_ingress) | cloudposse/stack-config/yaml//modules/remote-state | 2.0.0 |
+| <a name="module_vpc_ingress"></a> [vpc\_ingress](#module\_vpc\_ingress) | cloudposse/stack-config/yaml//modules/remote-state | 2.0.1 |
 
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [aws_iam_instance_profile.default](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_instance_profile) | resource |
 | [aws_iam_policy.ecr_public_readonly](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [aws_iam_policy.ipv6_eks_cni_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
@@ -846,7 +839,7 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_access_config"></a> [access\_config](#input\_access\_config) | Access configuration for the EKS cluster | <pre>object({<br/>    authentication_mode                         = optional(string, "API")<br/>    bootstrap_cluster_creator_admin_permissions = optional(bool, false)<br/>  })</pre> | `{}` | no |
 | <a name="input_additional_tag_map"></a> [additional\_tag\_map](#input\_additional\_tag\_map) | Additional key-value pairs to add to each map in `tags_as_list_of_maps`. Not added to `tags` or `id`.<br/>This is for some rare cases where resources want additional configuration of tags<br/>and therefore take a list of maps with tag key, value, and additional configuration. | `map(string)` | `{}` | no |
 | <a name="input_addons"></a> [addons](#input\_addons) | Manages [EKS addons](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eks_addon) resources | <pre>map(object({<br/>    enabled       = optional(bool, true)<br/>    addon_version = optional(string, null)<br/>    # configuration_values is a JSON string, such as '{"computeType": "Fargate"}'.<br/>    configuration_values = optional(string, null)<br/>    # Set default resolve_conflicts to OVERWRITE because it is required on initial installation of<br/>    # add-ons that have self-managed versions installed by default (e.g. vpc-cni, coredns), and<br/>    # because any custom configuration that you would want to preserve should be managed by Terraform.<br/>    resolve_conflicts_on_create = optional(string, "OVERWRITE")<br/>    resolve_conflicts_on_update = optional(string, "OVERWRITE")<br/>    service_account_role_arn    = optional(string, null)<br/>    create_timeout              = optional(string, null)<br/>    update_timeout              = optional(string, null)<br/>    delete_timeout              = optional(string, null)<br/>    # When `true`, the underlying Kubernetes resources (e.g. the coredns/vpc-cni/kube-proxy<br/>    # DaemonSets and Deployments) are left running when the addon is removed from Terraform<br/>    # management. `preserve` only takes effect at destroy time, so set it `true` and apply<br/>    # while the addon is still present, then remove the addon so the destroy honors it.<br/>    preserve = optional(bool, null)<br/>  }))</pre> | `{}` | no |
@@ -920,7 +913,7 @@ If the new addon requires an EKS IAM Role for Kubernetes Service Account, perfor
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_auto_mode_enabled"></a> [auto\_mode\_enabled](#output\_auto\_mode\_enabled) | Whether EKS Auto Mode is enabled on the cluster |
 | <a name="output_auto_mode_node_role_arn"></a> [auto\_mode\_node\_role\_arn](#output\_auto\_mode\_node\_role\_arn) | ARN of the IAM role used by Auto Mode nodes |
 | <a name="output_auto_mode_node_role_name"></a> [auto\_mode\_node\_role\_name](#output\_auto\_mode\_node\_role\_name) | Name of the IAM role used by Auto Mode nodes |
